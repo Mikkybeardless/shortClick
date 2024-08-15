@@ -12,8 +12,6 @@ import { RedisModule } from '@nestjs-modules/ioredis';
 
 @Module({
   imports: [
-    AuthModule,
-    UrlModule,
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRoot(process.env.MONGODB_URL!),
     RedisModule.forRootAsync({
@@ -31,6 +29,8 @@ import { RedisModule } from '@nestjs-modules/ioredis';
         limit: 10,
       },
     ]),
+    AuthModule,
+    UrlModule,
   ],
   controllers: [AppController],
   providers: [
