@@ -19,7 +19,14 @@ export class AppService {
     // Get the value from the cache
     const value = await this.redisService.getCache('test_key');
 
-    console.log('Cached value:', value);
+    console.log(
+      'redisUrl',
+      process.env.REDIS_URL,
+      process.env.MONGODB_URL,
+      process.env.JWT_SECRET,
+      process.env.BASE,
+      process.env.PORT,
+    );
 
     return value;
   }
