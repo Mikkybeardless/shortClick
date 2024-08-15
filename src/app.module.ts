@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
-import { AuthModule } from './auth/auth.module.js';
-import { UrlModule } from './url/url.module.js';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
+import { UrlModule } from './url/url.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { RedisService } from './redis/redis.service.js';
+import { RedisService } from './redis/redis.service';
 import { RedisModule } from '@nestjs-modules/ioredis';
 
 @Module({

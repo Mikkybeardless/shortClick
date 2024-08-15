@@ -1,5 +1,5 @@
 import { Schema, Prop, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 export type UrlDocument = Url & Document;
 
@@ -17,14 +17,17 @@ export class Url {
   @Prop()
   customDomain?: string;
 
-  @Prop({ unique: true })
+  @Prop()
   customSlug?: string;
 
-  @Prop()
-  owner?: string;
+  @Prop({ type: Types.ObjectId, ref: 'auths' })
+  owner?: Types.ObjectId;
 
   @Prop({ required: true, type: Number, default: 0 })
   clicks: number;
+
+  @Prop()
+  qrCode?: string;
 
   @Prop({
     type: [

@@ -5,7 +5,7 @@
   "author": "Igashi Michael",
   "private": true,
   "license": "UNLICENSED",
-  "type": "module",
+
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -37,8 +37,10 @@
     "cache-manager": "^5.7.6",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "fast-geoip": "^1.1.88",
     "geoip-lite": "^1.4.10",
     "ioredis": "^5.4.1",
+    "mongodb-memory-server": "^10.0.0",
     "mongoose": "^8.5.2",
     "nanoid": "^5.0.7",
     "qrcode": "^1.5.4",

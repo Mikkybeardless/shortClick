@@ -1,5 +1,5 @@
 import { IsString, IsEmail, IsNotEmpty } from 'class-validator';
-import { Role } from '../entities/auth.entity.js';
+import { Role } from '../entities/auth.entity';
 
 export class CreateAuthDto {
   @IsNotEmpty()

@@ -11,12 +11,14 @@ import {
   UseInterceptors,
   UseGuards,
 } from '@nestjs/common';
-import { UrlService } from './url.service.js';
-import { CreateUrlDto } from './dto/create-url.dto.js';
-import { UserPayload } from 'src/auth/auth.service.js';
+import { UrlService } from './url.service';
+import { CreateUrlDto } from './dto/create-url.dto';
+import { UserPayload } from 'src/auth/auth.service';
 import { Request, Response } from 'express';
-import { Url } from './entities/url-entity.dto.js';
-import { AuthGuard } from '../auth/auth.guard.js';
+import { Url } from './entities/url-entity.dto';
+import { AuthGuard } from '../auth/auth.guard';
+import { error } from 'console';
+import { CreateQRcodeDto } from './dto/create-qrCode.dto';
 
 @Controller('urls')
 export class UrlController {
@@ -30,10 +32,10 @@ export class UrlController {
     return this.urlService.createShortUrl(createUrlDto, req);
   }
 
-  @UseGuards(AuthGuard)
-  @Get(':id/qrcode')
-  async getQrCode(@Param('id') id: string, @Res() res: Response) {
-    const response = await this.urlService.getQrCode(id, res);
+  // @UseGuards(AuthGuard)
+  @Post('/qrcode')
+  async getQrCode(@Body() urlData: CreateQRcodeDto, @Res() res: Response) {
+    const response = await this.urlService.createQrCode(urlData, res);
 
     return response;
   }
@@ -47,11 +49,11 @@ export class UrlController {
   async getUrlAnalytics(@Param('id') id: string): Promise<any> {
     const url: Url = (await this.urlService.findById(id)) as Url;
 
-    return { clicks: url.clicks, analytics: url.analytics };
+    return { clicks: url.clicks, analytics: url.analytics, statusCode: 200 };
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.urlService.remove(id);
+    return this.urlService.removeUrl(id);
   }
 }

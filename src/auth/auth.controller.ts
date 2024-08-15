@@ -15,11 +15,11 @@ import {
   Redirect,
   Request,
 } from '@nestjs/common';
-import { AuthService, UserPayload } from './auth.service.js';
-import { CreateAuthDto } from './dto/create-auth.dto.js';
-import { UpdateAuthDto } from './dto/update-auth.dto.js';
-import { AuthGuard } from './auth.guard.js';
-import { SigninDto } from './dto/signin-auth.dto.js';
+import { AuthService, UserPayload } from './auth.service';
+import { CreateAuthDto } from './dto/create-auth.dto';
+import { UpdateAuthDto } from './dto/update-auth.dto';
+import { AuthGuard } from './auth.guard';
+import { SigninDto } from './dto/signin-auth.dto';
 
 @Controller('auth')
 export class AuthController {

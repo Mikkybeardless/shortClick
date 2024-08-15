@@ -7,14 +7,14 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
 import { Request, Response } from 'express';
-import geoip from 'geoip-lite';
-import { Url } from './entities/url-entity.dto.js';
-import { CreateUrlDto } from './dto/create-url.dto.js';
-import { UserPayload } from '../auth/auth.service.js';
-import { RedisService } from '../redis/redis.service.js';
+import geoip from 'fast-geoip';
+import { Url } from './entities/url-entity.dto';
+import { CreateUrlDto } from './dto/create-url.dto';
+import { UserPayload } from '../auth/auth.service';
+import { CreateQRcodeDto } from './dto/create-qrCode.dto';
+import { RedisService } from '../redis/redis.service';
 
 type resp = {
   message: string;
@@ -29,15 +29,21 @@ export class UrlService {
 
   private generateShortId(): string {
     // logic to generate a unique short ID
-    const urlId = nanoid(4);
+    const chars =
+      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let id = '';
 
-    return urlId;
+    for (let i = 0; i < 4; i++) {
+      id += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    return id;
   }
 
-  private async generateQrCode(url: Url) {
+  private async generateQrCode(url: string) {
     try {
       // Generate QR code as a data URL (base64 string)
-      const qrCodeDataUrl = await QRCode.toDataURL(url.shortUrl);
+      const qrCodeDataUrl = await QRCode.toDataURL(url);
 
       return qrCodeDataUrl;
     } catch (error) {
@@ -45,8 +51,8 @@ export class UrlService {
     }
   }
 
-  private getCountry = (ip: any) => {
-    const geo = geoip.lookup(ip);
+  private getCountry = async (ip: any) => {
+    const geo = await geoip.lookup(ip);
     return geo?.country;
   };
 
@@ -54,36 +60,44 @@ export class UrlService {
     createUrlDto: CreateUrlDto,
     req: Request & { user: UserPayload | undefined },
   ): Promise<Url> {
-    const { origUrl, customDomain, customSlug } = createUrlDto;
-    const owner = req.user?.id;
-    if (owner) {
-    }
+    try {
+      const { origUrl, customDomain, customSlug } = createUrlDto;
+      const owner = req.user?.id;
 
-    const existingUrl = await this.urlModel.findOne({ origUrl: origUrl });
-    if (existingUrl) {
-      return existingUrl;
+      const existingUrl = await this.urlModel.findOne({ origUrl: origUrl });
+      if (existingUrl) {
+        return existingUrl;
+      }
+      // Generate a unique identifier for the short URL
+      let urlId = customSlug || this.generateShortId();
+
+      const existingId = await this.urlModel.findOne({ urlId: urlId });
+      if (existingId) urlId = this.generateShortId(); //regenerate urlId
+
+      const base = customDomain || process.env.BASE;
+      const shortUrl = `${base}/${urlId}`;
+
+      const newUrl = new this.urlModel({
+        origUrl,
+        shortUrl,
+        urlId,
+        customDomain,
+        customSlug,
+        owner,
+      });
+      return await newUrl.save();
+    } catch (error) {
+      console.error('Error creating short URL:', error);
+      throw new Error('An error occurred while creating the short URL.');
     }
-    // Generate a unique identifier for the short URL
-    let urlId = customSlug || this.generateShortId();
-    const existingId = await this.urlModel.findOne({ urlId: urlId });
-    if (existingId) urlId = this.generateShortId();
-    const base = customDomain || process.env.BASE;
-    const shortUrl = `${base}/${urlId}`;
-    const newUrl = new this.urlModel({
-      origUrl,
-      customDomain,
-      customSlug,
-      shortUrl,
-      urlId,
-      owner,
-    });
-    return newUrl.save();
   }
 
   async findAndUpdateClicks(id: string, req: Request): Promise<Url> {
     const ip = req.ip;
     const country = this.getCountry(ip);
     const timestamp = new Date();
+
+    console.log(country, ip, timestamp);
 
     const url = await this.urlModel.findOneAndUpdate(
       { urlId: id },
@@ -117,52 +131,47 @@ export class UrlService {
     return url;
   }
 
-  async getConstomUrls(query: string) {
-    const cacheKey = `query_${query}`;
-    const cacheData = this.redisService.getCache(cacheKey);
+  async createQrCode(urlData: CreateQRcodeDto, res: Response) {
+    try {
+      const { url } = urlData;
+      const existingUrl = await this.urlModel.findOne({ shortUrl: url });
 
-    if (cacheData) {
-      return cacheData;
+      if (existingUrl?.qrCode) {
+        const img = existingUrl.qrCode;
+
+        res.writeHead(200, {
+          'Content-Type': 'image/png',
+          'Content-Length': img.length,
+        });
+
+        return res.end(img);
+      }
+      const qrCodeDataUrl = await this.generateQrCode(url);
+      const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
+      const qrCode = Buffer.from(base64Data, 'base64');
+      const dbUrl = await this.urlModel.findOneAndUpdate(
+        { shortUrl: url },
+        {
+          $set: { qrCode: qrCode },
+        },
+        { new: true },
+      );
+      if (!dbUrl) {
+        throw new NotFoundException('Url not found');
+      }
+
+      const img = qrCode;
+
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Content-Length': img.length,
+      });
+
+      return res.end(img);
+    } catch (error) {
+      console.log(error);
+      throw new BadRequestException('Invalid URL format');
     }
-    console.log('returning data from database');
-    // Find and update the document in one operation
-    const url = await this.urlModel.find(
-      { customDomain: query }, // Filter criteria
-    );
-
-    if (url) {
-      await this.redisService.setCache(cacheKey, url);
-      return url;
-    } else {
-      throw new NotFoundException('Url not found');
-    }
-  }
-
-  async getQrCode(id: string, res: Response) {
-    const cacheKey = 'qrCode';
-    const cacheQrcode = await this.redisService.getCache(cacheKey);
-
-    if (cacheQrcode) {
-      console.log('returning QRCode from cache');
-      return res.end(cacheQrcode);
-    }
-
-    const url = await this.urlModel.findById(id);
-    if (!url) {
-      throw new NotFoundException('Url not found');
-    }
-
-    const qrCodeDataUrl = await this.generateQrCode(url);
-    const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
-    const img = Buffer.from(base64Data, 'base64');
-
-    await this.redisService.setCache(cacheKey, img);
-    res.writeHead(200, {
-      'Content-Type': 'image/png',
-      'Content-Length': img.length,
-    });
-
-    return res.end(img);
   }
 
   async findAll(ownerId: string) {
@@ -179,10 +188,15 @@ export class UrlService {
       throw new NotFoundException('Urls not found');
     }
     await this.redisService.setCache(cacheKey, urls); // Cache TTL (time-to-live) in seconds
-    return urls;
+
+    return {
+      message: `urls created by user with id ${ownerId}`,
+      data: urls,
+      statusCode: 200,
+    };
   }
 
-  async remove(id: string): Promise<resp> {
+  async removeUrl(id: string): Promise<resp> {
     await this.urlModel.findByIdAndDelete(id);
     return {
       message: `url with id ${id} deleted successfully`,

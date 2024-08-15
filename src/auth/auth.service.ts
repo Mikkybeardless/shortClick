@@ -1,16 +1,17 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto.js';
-import { UpdateAuthDto } from './dto/update-auth.dto.js';
-import { Auth } from './entities/auth.entity.js';
+import { CreateAuthDto } from './dto/create-auth.dto';
+import { UpdateAuthDto } from './dto/update-auth.dto';
+import { Auth } from './entities/auth.entity';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { SigninDto } from './dto/signin-auth.dto.js';
+import { SigninDto } from './dto/signin-auth.dto';
 import { Types } from 'mongoose';
 
 export interface UserPayload {
@@ -18,11 +19,6 @@ export interface UserPayload {
   email: string;
   id: Types.ObjectId;
   sub: Types.ObjectId;
-}
-interface IFindAllQuery {
-  email?: string;
-  username?: string;
-  page?: number;
 }
 
 @Injectable()
@@ -79,6 +75,9 @@ export class AuthService {
     signInDto: SigninDto,
   ): Promise<{ message: string; access_token: string }> {
     const { email, password } = signInDto;
+    if (!email || !password) {
+      throw new BadRequestException('enter username and email');
+    }
     const user = await this.authModel.findOne({ email });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -93,6 +92,9 @@ export class AuthService {
       id: user._id,
       sub: user._id,
     };
+
+    delete (user as { password?: string }).password;
+
     return {
       message: 'login successful',
       access_token: await this.jwtService.signAsync(payload),
