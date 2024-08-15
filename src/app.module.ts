@@ -12,14 +12,12 @@ import { RedisModule } from '@nestjs-modules/ioredis';
 
 @Module({
   imports: [
-    RedisModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: () => ({
-        type: 'single',
-        url: process.env.REDIS_URL,
-      }),
-    }),
     ConfigModule.forRoot({ isGlobal: true }),
+    RedisModule.forRoot({
+      type: 'single',
+      url: process.env.REDIS_URL,
+    }),
+
     MongooseModule.forRoot(process.env.MONGODB_URL!),
 
     ThrottlerModule.forRoot([

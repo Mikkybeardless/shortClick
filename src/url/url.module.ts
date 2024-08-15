@@ -10,12 +10,9 @@ import { RedisService } from '../redis/redis.service.js';
 
 @Module({
   imports: [
-    RedisModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: () => ({
-        type: 'single',
-        url: process.env.REDIS_URL,
-      }),
+    RedisModule.forRoot({
+      type: 'single',
+      url: process.env.REDIS_URL,
     }),
     MongooseModule.forFeature([{ name: 'Url', schema: UrlSchema }]),
     JwtModule.registerAsync({
