@@ -10,6 +10,13 @@ import { RedisService } from '../redis/redis.service.js';
 
 @Module({
   imports: [
+    RedisModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: () => ({
+        type: 'single',
+        url: process.env.REDIS_URL,
+      }),
+    }),
     MongooseModule.forFeature([{ name: 'Url', schema: UrlSchema }]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -17,14 +24,6 @@ import { RedisService } from '../redis/redis.service.js';
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: { expiresIn: '1h' },
-      }),
-    }),
-
-    RedisModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: () => ({
-        type: 'single',
-        url: process.env.REDIS_URL,
       }),
     }),
   ],
