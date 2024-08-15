@@ -22,10 +22,9 @@ import { RedisService } from '../redis/redis.service.js';
 
     RedisModule.forRootAsync({
       imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
+      useFactory: () => ({
         type: 'single',
-        url: configService.get<string>('REDIS_URL'),
+        url: process.env.REDIS_URL,
       }),
     }),
   ],
