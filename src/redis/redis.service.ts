@@ -9,7 +9,14 @@ export class RedisService {
     const data = await this.redis.get(key);
     return { data };
   }
-  async setCache(key: string, value: any) {
+  async setCache(key: string, value: any, ttlInSeconds: number) {
     await this.redis.set(key, value);
+    if (ttlInSeconds) {
+      await this.redis.expire(key, ttlInSeconds);
+    }
+  }
+
+  async clearCache() {
+    await this.redis.flushall();
   }
 }

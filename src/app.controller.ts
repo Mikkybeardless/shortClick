@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Param,
+  Put,
   Redirect,
   Req,
   UseInterceptors,

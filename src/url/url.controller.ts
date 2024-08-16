@@ -10,6 +10,7 @@ import {
   Req,
   UseInterceptors,
   UseGuards,
+  Put,
 } from '@nestjs/common';
 import { UrlService } from './url.service';
 import { CreateUrlDto } from './dto/create-url.dto';
@@ -33,7 +34,7 @@ export class UrlController {
   }
 
   // @UseGuards(AuthGuard)
-  @Post('/qrcode')
+  @Put('/qrcode')
   async getQrCode(@Body() urlData: CreateQRcodeDto, @Res() res: Response) {
     const response = await this.urlService.createQrCode(urlData, res);
 

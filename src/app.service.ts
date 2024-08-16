@@ -14,7 +14,7 @@ export class AppService {
       'Available Methods:',
       Object.getOwnPropertyNames(Object.getPrototypeOf(this.redisService)),
     );
-    await this.redisService.setCache('test_key', 'test_value');
+    await this.redisService.setCache('test_key', 'test_value', 360);
 
     // Get the value from the cache
     const value = await this.redisService.getCache('test_key');

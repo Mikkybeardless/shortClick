@@ -127,7 +127,7 @@ export class UrlService {
       throw new NotFoundException('Url with this id not not found');
     }
 
-    await this.redisService.setCache(cacheKey, url);
+    await this.redisService.setCache(cacheKey, url, 3000);
     return url;
   }
 
@@ -143,7 +143,14 @@ export class UrlService {
           'Content-Type': 'image/png',
           'Content-Length': img.length,
         });
-
+        console.log(
+          'redisUrl',
+          process.env.REDIS_URL,
+          process.env.MONGODB_URL,
+          process.env.JWT_SECRET,
+          process.env.BASE,
+          process.env.PORT,
+        );
         return res.end(img);
       }
       const qrCodeDataUrl = await this.generateQrCode(url);
@@ -187,7 +194,7 @@ export class UrlService {
     if (!urls) {
       throw new NotFoundException('Urls not found');
     }
-    await this.redisService.setCache(cacheKey, urls); // Cache TTL (time-to-live) in seconds
+    await this.redisService.setCache(cacheKey, urls, 3000); // Cache TTL (time-to-live) in seconds
 
     return {
       message: `urls created by user with id ${ownerId}`,
