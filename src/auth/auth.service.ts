@@ -13,12 +13,19 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { SigninDto } from './dto/signin-auth.dto';
 import { Types } from 'mongoose';
-
+import _ from 'lodash';
+import validator from 'validator';
 export interface UserPayload {
   role: 'user' | 'admin';
   email: string;
   id: Types.ObjectId;
   sub: Types.ObjectId;
+}
+
+interface FindAllQuery {
+  email?: string;
+  username?: string;
+  page?: number;
 }
 
 @Injectable()
@@ -57,17 +64,14 @@ export class AuthService {
       role,
     };
 
-    const user = new this.authModel(newAuth);
-    await user.save();
-    delete (user as { password?: string }).password;
+    const unSaveUser = new this.authModel(newAuth);
+    await unSaveUser.save();
+    // delete (user as { password?: string }).password;
 
-    // const token = await this.signIn({ email, password });
+    const user = _.omit(unSaveUser.toObject(), ['password']);
     return {
       message: 'User created successfully',
-      data: {
-        user,
-      },
-      statusCode: 201,
+      data: user,
     };
   }
 
@@ -93,20 +97,54 @@ export class AuthService {
       sub: user._id,
     };
 
-    delete (user as { password?: string }).password;
-
     return {
-      message: 'login successful',
+      message: 'Login successful',
       access_token: await this.jwtService.signAsync(payload),
     };
   }
 
-  async findAll() {
-    const users = await this.authModel.find({});
+  async findAll(options: FindAllQuery) {
+    const query: FindAllQuery | undefined = {};
+
+    if (options.email) query['email'] = options.email;
+
+    if (options.username) query['username'] = options.username;
+
+    const auths = await this.authModel.find({ ...query });
+
     return {
-      message: 'All users',
-      users,
-      statusCode: 200,
+      message: 'Auth retrieved successfully',
+      data: auths,
+    };
+  }
+
+  async update(id: number, updateAuthDto: UpdateAuthDto) {
+    const { username, password } = updateAuthDto;
+
+    if (!username && !password) {
+      throw new BadRequestException('Bad request, no data to update');
+    }
+
+    const updateData: any = {};
+    if (username) updateData['username'] = username;
+    if (password) updateData['password'] = password;
+
+    const user = await this.authModel.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
+
+    if (!user) {
+      return {
+        message: 'User not found',
+        data: null,
+      };
+    }
+
+    return {
+      message: 'Auth credentials successfully updated',
+      data: {
+        user,
+      },
     };
   }
 
@@ -114,7 +152,6 @@ export class AuthService {
     await this.authModel.findByIdAndDelete(id);
     return {
       message: `Auth with id ${id} deleted successfully`,
-      statusCode: 200,
     };
   }
 }

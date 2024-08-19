@@ -4,6 +4,7 @@ import {
   BadRequestException,
   NotFoundException,
   Inject,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -63,7 +64,7 @@ export class UrlService {
     try {
       const { origUrl, customDomain, customSlug } = createUrlDto;
       const owner = req.user?.id;
-
+      console.log(owner);
       const existingUrl = await this.urlModel.findOne({ origUrl: origUrl });
       if (existingUrl) {
         return existingUrl;
@@ -116,19 +117,26 @@ export class UrlService {
   }
 
   async findById(id: string) {
-    const cacheKey = `findById_${id}`;
-    const cacheData = this.redisService.getCache(cacheKey);
-    if (cacheData) {
-      console.log('returning url by id from cache');
-      return cacheData;
-    }
-    const url = await this.urlModel.findById(id);
-    if (!url) {
-      throw new NotFoundException('Url with this id not not found');
-    }
+    try {
+      // const cacheKey = `${id}`;
+      // const cacheData = this.redisService.getCache(cacheKey);
+      // if (cacheData) {
+      //   console.log('returning url by id from cache');
+      //   return cacheData;
+      // }
+      const url = await this.urlModel.findById(id);
+      if (!url) {
+        throw new NotFoundException('URL with this id not not found');
+      }
 
-    await this.redisService.setCache(cacheKey, url, 3000);
-    return url;
+      // await this.redisService.setCache(cacheKey, url, 3000);
+      return url;
+    } catch (error) {
+      console.error('Error finding by id:', error);
+      throw new InternalServerErrorException(
+        'Something went wrong pls try again later',
+      );
+    }
   }
 
   async createQrCode(urlData: CreateQRcodeDto, res: Response) {
@@ -164,7 +172,7 @@ export class UrlService {
         { new: true },
       );
       if (!dbUrl) {
-        throw new NotFoundException('Url not found');
+        throw new NotFoundException('URL not found');
       }
 
       const img = qrCode;
@@ -182,29 +190,38 @@ export class UrlService {
   }
 
   async findAll(ownerId: string) {
-    const cacheKey = `ownerUrls_${ownerId}`;
-    const cachedUrls = await this.redisService.getCache(cacheKey);
+    try {
+      const cacheKey = `ownerUrls_${ownerId}`;
+      const cachedUrls = await this.redisService.getCache(cacheKey);
 
-    if (cachedUrls) {
-      console.log('Returning data from cache');
-      return cachedUrls;
-    }
-    console.log('Returning urls from database');
-    const urls = this.urlModel.find({ owner: ownerId });
-    if (!urls) {
-      throw new NotFoundException('Urls not found');
-    }
-    await this.redisService.setCache(cacheKey, urls, 3000); // Cache TTL (time-to-live) in seconds
+      if (cachedUrls) {
+        console.log('Returning data from cache');
+        return cachedUrls;
+      }
+      console.log('Returning urls from database');
+      const urls = this.urlModel.find({ owner: ownerId });
+      if (!urls) {
+        throw new NotFoundException('URLs not found');
+      }
+      await this.redisService.setCache(cacheKey, urls, 3000); // Cache TTL (time-to-live) in seconds
 
-    return {
-      message: `urls created by user with id ${ownerId}`,
-      data: urls,
-      statusCode: 200,
-    };
+      return {
+        message: `urls created by user with id ${ownerId}`,
+        data: urls,
+        statusCode: 200,
+      };
+    } catch (error) {
+      console.error('Error finding all user URLs:', error);
+      throw new InternalServerErrorException(
+        'Something went wrong pls try again later',
+      );
+    }
   }
 
   async removeUrl(id: string): Promise<resp> {
-    await this.urlModel.findByIdAndDelete(id);
+    const url = await this.urlModel.findByIdAndDelete(id);
+
+    if (!url) throw new NotFoundException('URL not found');
     return {
       message: `url with id ${id} deleted successfully`,
       statusCode: 200,

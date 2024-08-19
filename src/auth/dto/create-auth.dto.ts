@@ -2,7 +2,7 @@ import { IsString, IsEmail, IsNotEmpty } from 'class-validator';
 import { Role } from '../entities/auth.entity';
 
 export class CreateAuthDto {
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Username should not be empty' })
   @IsString()
   username: string;
 
@@ -10,10 +10,10 @@ export class CreateAuthDto {
   @IsEmail({}, { message: 'invalid email' })
   email: string;
 
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Password field is required' })
   @IsString()
   password: string;
 
   @IsString()
-  role: Role;
+  role?: Role;
 }

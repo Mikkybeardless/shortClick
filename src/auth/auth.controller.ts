@@ -26,7 +26,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   // Sign up
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.CREATED)
   @Post('register')
   signUp(@Body() createDto: CreateAuthDto) {
     return this.authService.signUp(createDto);
@@ -46,17 +46,34 @@ export class AuthController {
     return req.user;
   }
 
+  @UseGuards(AuthGuard)
   @Get('users')
-  getUsers() {
-    const users = this.authService.findAll();
-    console.log(users);
-    return users;
+  findAll(
+    @Query('email') email: string,
+    @Query('username') username: string,
+    @Query('page') page: number,
+  ) {
+    return this.authService.findAll({ email, username, page });
+  }
+
+  // PATCH /auths/:id
+  @Patch(':id')
+  protected update(
+    @Param('id') id: string,
+    @Body() updateAuthDto: UpdateAuthDto,
+  ) {
+    return this.authService.update(+id, updateAuthDto);
   }
 
   //Post sign in
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  signIn(@Body() signInDto: SigninDto) {
+  signIn(
+    @Body(
+      new ValidationPipe({ errorHttpStatusCode: HttpStatus.NOT_ACCEPTABLE }),
+    )
+    signInDto: SigninDto,
+  ) {
     return this.authService.signIn(signInDto);
   }
 
