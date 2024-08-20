@@ -23,8 +23,24 @@
   [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
 ## Description
+Welcome aboard fellow developer, this is an API that shortens a long URL. You can easily share this short URL with friends or for business purposes. You can contribute by submitting your own scripts, which are also written in Typescript, which you think would be amazing to improve this API.
+
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+
+
+## Tech Stack
+* Nestjs: Typescript plus Express
+* MongoDB: Database
+# Jsonwebtoken: Auths
+
+
+## Features
+* Shorten a long URL
+* Generate custom QRcode for generated links
+* Perform CRUD operations
+* Free plan for nonusers and access to more features for users
+* Analytics: know how your  links are doing
 
 ## Installation
 
