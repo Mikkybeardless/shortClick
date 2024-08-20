@@ -40,7 +40,7 @@ Welcome aboard fellow developer, this is an API that shortens a long URL. You ca
 * Generate custom QRcode for generated links
 * Perform CRUD operations
 * Free plan for nonusers and access to more features for users
-* Analytics: know how your  links are doing
+* Analytics: know how your  links are doing by getting details of clicks and where they are coming from 
 
 ## Installation
 
