@@ -3,14 +3,14 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
-  Inject,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import QRCode from 'qrcode';
 import { Request, Response } from 'express';
-import geoip from 'fast-geoip';
+import axios from 'axios';
+
 import { Url } from './entities/url-entity.dto';
 import { CreateUrlDto } from './dto/create-url.dto';
 import { UserPayload } from '../auth/auth.service';
@@ -52,9 +52,13 @@ export class UrlService {
     }
   }
 
-  private getCountry = async (ip: any) => {
-    const geo = await geoip.lookup(ip);
-    return geo?.country;
+  private getIpDetails = async (
+    ip: string | undefined,
+    key: string | undefined,
+  ) => {
+    const url = `http://api.weatherapi.com/v1/current.json?key=${key}&q=${ip}`;
+    const response = await axios.get(url);
+    return response.data;
   };
 
   async createShortUrl(
@@ -93,49 +97,59 @@ export class UrlService {
     }
   }
 
-  async findAndUpdateClicks(id: string, req: Request): Promise<Url> {
-    const ip = req.ip;
-    const country = this.getCountry(ip);
-    const timestamp = new Date();
+  async findAndUpdateClicks(id: string, req: Request) {
+    try {
+      const key: string | undefined = process.env.API_KEY;
+      // const ip: string | undefined = req.ip;
+      const ip = '105.112.221.171';
+      const ipDetails = await this.getIpDetails(ip, key);
+      const { name, region, country, localtime } = ipDetails.location;
 
-    console.log(country, ip, timestamp);
+      console.log(name, region, country, localtime);
+      const timestamp = new Date();
 
-    const url = await this.urlModel.findOneAndUpdate(
-      { urlId: id },
-      {
-        $inc: { clicks: 1 },
-        $push: { country: country, timestamp: timestamp },
-      },
-      { new: true },
-    );
+      const url = await this.urlModel.findOneAndUpdate(
+        { urlId: id },
+        {
+          $inc: { clicks: 1 },
+          $push: {
+            analytics: {
+              country: country,
+              timestamp: timestamp,
+              clientIp: ip,
+              name: name,
+              region: region,
+              localtime: localtime,
+            },
+          },
+        },
+        { new: true },
+      );
 
-    if (!url) {
-      throw new NotFoundException('Url not found');
+      if (!url) {
+        throw new NotFoundException('Url not found');
+      }
+
+      return url;
+    } catch (error) {
+      console.error('Error finding and updating clicks', error);
+      throw new InternalServerErrorException(
+        'Something went wrong pls try again later',
+      );
     }
-
-    return url;
   }
 
   async findById(id: string) {
     try {
-      // const cacheKey = `${id}`;
-      // const cacheData = this.redisService.getCache(cacheKey);
-      // if (cacheData) {
-      //   console.log('returning url by id from cache');
-      //   return cacheData;
-      // }
       const url = await this.urlModel.findById(id);
       if (!url) {
         throw new NotFoundException('URL with this id not not found');
       }
 
-      // await this.redisService.setCache(cacheKey, url, 3000);
       return url;
     } catch (error) {
       console.error('Error finding by id:', error);
-      throw new InternalServerErrorException(
-        'Something went wrong pls try again later',
-      );
+      throw new InternalServerErrorException(error);
     }
   }
 
@@ -219,12 +233,19 @@ export class UrlService {
   }
 
   async removeUrl(id: string): Promise<resp> {
-    const url = await this.urlModel.findByIdAndDelete(id);
+    try {
+      const url = await this.urlModel.findByIdAndDelete(id);
 
-    if (!url) throw new NotFoundException('URL not found');
-    return {
-      message: `url with id ${id} deleted successfully`,
-      statusCode: 200,
-    };
+      if (!url) throw new NotFoundException('URL not found');
+      return {
+        message: `url with id ${id} deleted successfully`,
+        statusCode: 200,
+      };
+    } catch (error) {
+      console.error('Error finding by id:', error);
+      throw new InternalServerErrorException(
+        'Something went wrong pls try again later',
+      );
+    }
   }
 }

@@ -3,6 +3,29 @@ import { Document, Types } from 'mongoose';
 
 export type UrlDocument = Url & Document;
 
+@Schema()
+export class Analytics extends Document {
+  @Prop({ required: true })
+  country: string;
+
+  @Prop({ required: true })
+  timestamp: Date;
+
+  @Prop({ required: true })
+  clientIp: string;
+
+  @Prop({ required: true })
+  name: string;
+
+  @Prop({ required: true })
+  region: string;
+
+  @Prop({ required: true })
+  localtime: string;
+}
+
+export const AnalyticsSchema = SchemaFactory.createForClass(Analytics);
+
 @Schema({ timestamps: true })
 export class Url {
   @Prop({ required: true, unique: true, type: String })
@@ -29,16 +52,8 @@ export class Url {
   @Prop()
   qrCode?: string;
 
-  @Prop({
-    type: [
-      {
-        country: { type: String },
-        timestamp: { type: Date },
-      },
-    ],
-    default: [],
-  })
-  analytics: { country: string; timestamp: Date }[];
+  @Prop({ type: [AnalyticsSchema], default: [] })
+  analytics: Analytics[];
 }
 
 export const UrlSchema = SchemaFactory.createForClass(Url);

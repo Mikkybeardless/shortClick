@@ -8,7 +8,6 @@ import {
   Delete,
   Res,
   Req,
-  UseInterceptors,
   UseGuards,
   Put,
 } from '@nestjs/common';
@@ -20,12 +19,12 @@ import { Url } from './entities/url-entity.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { CreateQRcodeDto } from './dto/create-qrCode.dto';
 
-@Controller('urls/users')
+@Controller('urls')
 export class UrlController {
   constructor(private readonly urlService: UrlService) {}
 
   @UseGuards(AuthGuard)
-  @Post()
+  @Post('/users')
   async create(
     @Body() createUrlDto: CreateUrlDto,
     @Req() req: Request & { user: UserPayload | undefined },
@@ -62,6 +61,11 @@ export class UrlController {
 
     return { clicks: url.clicks, analytics: url.analytics, statusCode: 200 };
   }
+
+  // @Get(':id/home')
+  // async redirect(@Param('id') id: string, @Req() req: Request) {
+  //   return await this.urlService.findAndUpdateClicks(id, req);
+  // }
 
   @UseGuards(AuthGuard)
   @Delete(':id')
