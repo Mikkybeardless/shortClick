@@ -32,7 +32,7 @@ Welcome aboard fellow developer, this is an API that shortens a long URL. You ca
 ## Tech Stack
 * Nestjs: Typescript plus Express
 * MongoDB: Database
-# Jsonwebtoken: Auths
+* Jsonwebtoken: Auths
 
 
 ## Features
