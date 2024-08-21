@@ -100,8 +100,7 @@ export class UrlService {
   async findAndUpdateClicks(id: string, req: Request) {
     try {
       const key: string | undefined = process.env.API_KEY;
-      // const ip: string | undefined = req.ip;
-      const ip = '105.112.221.171';
+      const ip: string | undefined = req.ip;
       const ipDetails = await this.getIpDetails(ip, key);
       const { name, region, country, localtime } = ipDetails.location;
 
