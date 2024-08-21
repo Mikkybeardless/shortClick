@@ -24,7 +24,7 @@ export class UrlController {
   constructor(private readonly urlService: UrlService) {}
 
   @UseGuards(AuthGuard)
-  @Post('/users')
+  @Post('/user')
   async create(
     @Body() createUrlDto: CreateUrlDto,
     @Req() req: Request & { user: UserPayload | undefined },
@@ -49,9 +49,9 @@ export class UrlController {
   }
 
   @UseGuards(AuthGuard)
-  @Get(':ownerId')
-  findAll(@Param('ownerId') ownerId: string) {
-    return this.urlService.findAll(ownerId);
+  @Get('/user')
+  findAll(@Req() req: Request & { user: UserPayload | undefined }) {
+    return this.urlService.findAll(req);
   }
 
   @UseGuards(AuthGuard)
@@ -61,11 +61,6 @@ export class UrlController {
 
     return { clicks: url.clicks, analytics: url.analytics, statusCode: 200 };
   }
-
-  // @Get(':id/home')
-  // async redirect(@Param('id') id: string, @Req() req: Request) {
-  //   return await this.urlService.findAndUpdateClicks(id, req);
-  // }
 
   @UseGuards(AuthGuard)
   @Delete(':id')
