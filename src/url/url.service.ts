@@ -206,18 +206,18 @@ export class UrlService {
     try {
       const ownerId = req.user?.id;
       const cacheKey = `ownerUrls_${ownerId}`;
-      const cachedUrls = await this.redisService.getCache(cacheKey);
+      // const cachedUrls = await this.redisService.getCache(cacheKey);
 
-      if (cachedUrls) {
-        console.log('Returning data from cache');
-        return cachedUrls;
-      }
-      console.log('Returning urls from database');
+      // if (cachedUrls) {
+      //   console.log('Returning data from cache');
+      //   return cachedUrls;
+      // }
+      // console.log('Returning urls from database');
       const urls = this.urlModel.find({ owner: ownerId });
       if (!urls) {
         throw new NotFoundException('URLs not found');
       }
-      await this.redisService.setCache(cacheKey, urls, 3000); // Cache TTL (time-to-live) in seconds
+      // await this.redisService.setCache(cacheKey, urls, 300);
 
       return {
         message: `urls created by user with id ${ownerId}`,
