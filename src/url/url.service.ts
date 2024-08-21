@@ -217,7 +217,7 @@ export class UrlService {
       if (!urls) {
         throw new NotFoundException('URLs not found');
       }
-      await this.redisService.setCache(cacheKey, urls, 3000); // Cache TTL (time-to-live) in seconds
+      await this.redisService.setCache(cacheKey, urls, 300); // Cache TTL (time-to-live) in seconds
 
       return {
         message: `urls created by user with id ${ownerId}`,
