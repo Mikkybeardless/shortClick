@@ -43,7 +43,7 @@ export class Url {
   @Prop()
   customSlug?: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'auths' })
+  @Prop({ type: Types.ObjectId, ref: 'Auth', required: false })
   owner?: Types.ObjectId;
 
   @Prop({ required: true, type: Number, default: 0 })

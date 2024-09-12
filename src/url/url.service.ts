@@ -175,6 +175,7 @@ export class UrlService {
         return res.end(img);
       }
       const qrCodeDataUrl = await this.generateQrCode(url);
+      console.log(qrCodeDataUrl);
       const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
       const qrCode = Buffer.from(base64Data, 'base64');
       const dbUrl = await this.urlModel.findOneAndUpdate(
@@ -204,15 +205,17 @@ export class UrlService {
 
   async findAll(req: Request & { user: UserPayload | undefined }) {
     try {
-      const ownerId = req.user?.id;
+      const owner = req.user?.id;
 
-      const urls = this.urlModel.find({ owner: ownerId });
+      console.log(req.user);
+
+      const urls = await this.urlModel.find({ owner: owner });
       if (!urls) {
         throw new NotFoundException('URLs not found');
       }
 
       return {
-        message: `urls created by user with id ${ownerId}`,
+        message: `urls created by user with id ${owner}`,
         data: urls,
         statusCode: 200,
       };

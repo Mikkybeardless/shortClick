@@ -45,7 +45,10 @@ export class UrlController {
   async getQrCode(@Body() urlData: CreateQRcodeDto, @Res() res: Response) {
     const response = await this.urlService.createQrCode(urlData, res);
 
-    return response;
+    return {
+      message: 'QRcode successfully created',
+      QrCode: response,
+    };
   }
 
   @UseGuards(AuthGuard)

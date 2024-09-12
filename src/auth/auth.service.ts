@@ -14,10 +14,11 @@ import * as bcrypt from 'bcrypt';
 import { SigninDto } from './dto/signin-auth.dto';
 import { Types } from 'mongoose';
 import _ from 'lodash';
-import validator from 'validator';
+
 export interface UserPayload {
   role: 'user' | 'admin';
   email: string;
+  name: string;
   id: Types.ObjectId;
   sub: Types.ObjectId;
 }
@@ -93,6 +94,7 @@ export class AuthService {
     const payload: UserPayload = {
       role: user.role || 'user',
       email: user.email,
+      name: user.username,
       id: user._id,
       sub: user._id,
     };
