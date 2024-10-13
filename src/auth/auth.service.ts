@@ -1,19 +1,22 @@
 import {
   BadRequestException,
+  Body,
   Injectable,
   NotFoundException,
+  Res,
   UnauthorizedException,
 } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { Auth } from './entities/auth.entity';
-import { Model } from 'mongoose';
+import { Model, ObjectId } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { SigninDto } from './dto/signin-auth.dto';
 import { Types } from 'mongoose';
 import _ from 'lodash';
+
 
 export interface UserPayload {
   role: 'user' | 'admin';
@@ -27,6 +30,13 @@ interface FindAllQuery {
   email?: string;
   username?: string;
   page?: number;
+}
+interface User{
+  email: string;
+  password?: string;
+  username: string;
+  role?: 'user' | 'admin';
+  _id: Types.ObjectId
 }
 
 @Injectable()
@@ -42,6 +52,19 @@ export class AuthService {
     const salt = await bcrypt.genSalt(this.saltRounds);
     const hash = await bcrypt.hash(password, salt);
     return hash;
+  }
+
+  private readonly generateToken = async (user: User) => {
+    const payload: UserPayload = {
+      role: user.role || 'user',
+      email: user.email,
+      name: user.username,
+      id: user._id,
+      sub: user._id,
+    };
+
+    const token = await this.jwtService.signAsync(payload)
+    return token
   }
 
   // Comparing a password
@@ -68,17 +91,18 @@ export class AuthService {
     const unSaveUser = new this.authModel(newAuth);
     await unSaveUser.save();
     // delete (user as { password?: string }).password;
-
+    const token = await this.generateToken(unSaveUser);
     const user = _.omit(unSaveUser.toObject(), ['password']);
+
     return {
+      statusCode: 201,
       message: 'User created successfully',
       data: user,
+      accessToken: token
     };
   }
 
-  async signIn(
-    signInDto: SigninDto,
-  ): Promise<{ message: string; access_token: string }> {
+  async signIn(@Body() signInDto: SigninDto) {
     const { email, password } = signInDto;
     if (!email || !password) {
       throw new BadRequestException('enter username and email');
@@ -89,19 +113,15 @@ export class AuthService {
     }
 
     if (!(await this.comparePassword(password, user.password))) {
-      throw new NotFoundException('Invalid username or password');
+      throw new UnauthorizedException('Invalid username or password');
     }
-    const payload: UserPayload = {
-      role: user.role || 'user',
-      email: user.email,
-      name: user.username,
-      id: user._id,
-      sub: user._id,
-    };
-
+    const token = await this.generateToken(user);
+    const UserPayload = _.omit(user.toObject(), ['password']);
     return {
+      statusCode: 200,
       message: 'Login successful',
-      access_token: await this.jwtService.signAsync(payload),
+      data: UserPayload,
+      access_token: token
     };
   }
 

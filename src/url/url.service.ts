@@ -52,7 +52,7 @@ export class UrlService {
     }
   }
 
-  private getIpDetails = async (
+  public getIpDetails = async (
     ip: string | undefined,
     key: string | undefined,
   ) => {
@@ -65,131 +65,83 @@ export class UrlService {
     createUrlDto: CreateUrlDto,
     req: Request & { user: UserPayload | undefined },
   ): Promise<Url> {
-    try {
-      const { origUrl, customDomain, customSlug } = createUrlDto;
-      const owner = req.user?.id;
-      console.log(owner);
-      const existingUrl = await this.urlModel.findOne({ origUrl: origUrl });
-      if (existingUrl) {
-        return existingUrl;
-      }
-      // Generate a unique identifier for the short URL
-      let urlId = customSlug || this.generateShortId();
-
-      const existingId = await this.urlModel.findOne({ urlId: urlId });
-      if (existingId) urlId = this.generateShortId(); //regenerate urlId
-
-      const base = customDomain || process.env.BASE;
-      const shortUrl = `${base}/${urlId}`;
-
-      const newUrl = new this.urlModel({
-        origUrl,
-        shortUrl,
-        urlId,
-        customDomain,
-        customSlug,
-        owner,
-      });
-      return await newUrl.save();
-    } catch (error) {
-      console.error('Error creating short URL:', error);
-      throw new Error('An error occurred while creating the short URL.');
+    const { origUrl, customDomain, customSlug } = createUrlDto;
+    const owner = req.user?.id;
+    console.log(owner);
+    const existingUrl = await this.urlModel.findOne({ origUrl: origUrl });
+    if (existingUrl) {
+      return existingUrl;
     }
+    // Generate a unique identifier for the short URL
+    let urlId = customSlug || this.generateShortId();
+
+    const existingId = await this.urlModel.findOne({ urlId: urlId });
+    if (existingId) urlId = this.generateShortId(); //regenerate urlId
+
+    const base = customDomain || process.env.BASE;
+    const shortUrl = `${base}/${urlId}`;
+
+    const newUrl = await this.urlModel.create({
+      origUrl,
+      shortUrl,
+      urlId,
+      customDomain,
+      customSlug,
+      owner,
+    });
+
+    return newUrl;
   }
 
   async findAndUpdateClicks(id: string, req: Request) {
-    try {
-      const key: string | undefined = process.env.API_KEY;
-      const ip: string | undefined = req.ip;
-      const ipDetails = await this.getIpDetails(ip, key);
-      const { name, region, country, localtime } = ipDetails.location;
+    const key: string | undefined = process.env.API_KEY;
+    const ip: string | undefined = req.ip;
+    const ipDetails = await this.getIpDetails(ip, key);
+    const { name, region, country, localtime } = ipDetails.location;
 
-      console.log(name, region, country, localtime);
-      const timestamp = new Date();
+    console.log(name, region, country, localtime);
+    const timestamp = new Date();
 
-      const url = await this.urlModel.findOneAndUpdate(
-        { urlId: id },
-        {
-          $inc: { clicks: 1 },
-          $push: {
-            analytics: {
-              country: country,
-              timestamp: timestamp,
-              clientIp: ip,
-              name: name,
-              region: region,
-              localtime: localtime,
-            },
+    const url = await this.urlModel.findOneAndUpdate(
+      { urlId: id },
+      {
+        $inc: { clicks: 1 },
+        $push: {
+          analytics: {
+            country: country,
+            timestamp: timestamp,
+            clientIp: ip,
+            name: name,
+            region: region,
+            localtime: localtime,
           },
         },
-        { new: true },
-      );
+      },
+      { new: true },
+    );
 
-      if (!url) {
-        throw new NotFoundException('Url not found');
-      }
-
-      return url;
-    } catch (error) {
-      console.error('Error finding and updating clicks', error);
-      throw new InternalServerErrorException(
-        'Something went wrong pls try again later',
-      );
+    if (!url) {
+      throw new NotFoundException('Url not found');
     }
+
+    return url;
   }
 
   async findById(id: string) {
-    try {
-      const url = await this.urlModel.findById(id);
-      if (!url) {
-        throw new NotFoundException('URL with this id not not found');
-      }
-
-      return url;
-    } catch (error) {
-      console.error('Error finding by id:', error);
-      throw new InternalServerErrorException(error);
+    const url = await this.urlModel.findById(id);
+    if (!url) {
+      throw new NotFoundException('URL with this id not not found');
     }
+
+    return url;
   }
 
   async createQrCode(urlData: CreateQRcodeDto, res: Response) {
-    try {
-      const { url } = urlData;
-      const existingUrl = await this.urlModel.findOne({ shortUrl: url });
+    const { url } = urlData;
+    const existingUrl = await this.urlModel.findOne({ shortUrl: url });
 
-      if (existingUrl?.qrCode) {
-        const img = existingUrl.qrCode;
-
-        res.writeHead(200, {
-          'Content-Type': 'image/png',
-          'Content-Length': img.length,
-        });
-        console.log(
-          'redisUrl',
-          process.env.REDIS_URL,
-          process.env.MONGODB_URL,
-          process.env.JWT_SECRET,
-          process.env.BASE,
-          process.env.PORT,
-        );
-        return res.end(img);
-      }
-      const qrCodeDataUrl = await this.generateQrCode(url);
-      console.log(qrCodeDataUrl);
-      const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
-      const qrCode = Buffer.from(base64Data, 'base64');
-      const dbUrl = await this.urlModel.findOneAndUpdate(
-        { shortUrl: url },
-        {
-          $set: { qrCode: qrCode },
-        },
-        { new: true },
-      );
-      if (!dbUrl) {
-        throw new NotFoundException('URL not found');
-      }
-
-      const img = qrCode;
+    if (existingUrl?.qrCode) {
+      const img = existingUrl.qrCode;
 
       res.writeHead(200, {
         'Content-Type': 'image/png',
@@ -197,50 +149,56 @@ export class UrlService {
       });
 
       return res.end(img);
-    } catch (error) {
-      console.log(error);
-      throw new BadRequestException('Invalid URL format');
     }
+    const qrCodeDataUrl = await this.generateQrCode(url);
+    console.log(qrCodeDataUrl);
+    const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
+    const qrCode = Buffer.from(base64Data, 'base64');
+    const dbUrl = await this.urlModel.findOneAndUpdate(
+      { shortUrl: url },
+      {
+        $set: { qrCode: qrCode },
+      },
+      { new: true },
+    );
+    if (!dbUrl) {
+      throw new NotFoundException('URL not found');
+    }
+
+    const img = qrCode;
+
+    res.writeHead(200, {
+      'Content-Type': 'image/png',
+      'Content-Length': img.length,
+    });
+
+    return res.end(img);
   }
 
   async findAll(req: Request & { user: UserPayload | undefined }) {
-    try {
-      const owner = req.user?.id;
+    const owner = req.user?.id;
 
-      console.log(req.user);
+    console.log(req.user);
 
-      const urls = await this.urlModel.find({ owner: owner });
-      if (!urls) {
-        throw new NotFoundException('URLs not found');
-      }
-
-      return {
-        message: `urls created by user with id ${owner}`,
-        data: urls,
-        statusCode: 200,
-      };
-    } catch (error) {
-      console.error('Error finding all user URLs:', error);
-      throw new InternalServerErrorException(
-        'Something went wrong pls try again later',
-      );
+    const urls = await this.urlModel.find({ owner: owner });
+    if (!urls) {
+      throw new NotFoundException('URLs not found');
     }
+
+    return {
+      message: `urls created by user with id ${owner}`,
+      data: urls,
+      statusCode: 200,
+    };
   }
 
   async removeUrl(id: string): Promise<resp> {
-    try {
-      const url = await this.urlModel.findByIdAndDelete(id);
+    const url = await this.urlModel.findByIdAndDelete(id);
 
-      if (!url) throw new NotFoundException('URL not found');
-      return {
-        message: `url with id ${id} deleted successfully`,
-        statusCode: 200,
-      };
-    } catch (error) {
-      console.error('Error finding by id:', error);
-      throw new InternalServerErrorException(
-        'Something went wrong pls try again later',
-      );
-    }
+    if (!url) throw new NotFoundException('URL not found');
+    return {
+      message: `url with id ${id} deleted successfully`,
+      statusCode: 200,
+    };
   }
 }

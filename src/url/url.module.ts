@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { UrlController } from './url.controller.js';
-import { UrlService } from './url.service.js';
+import { UrlController } from './url.controller';
+import { UrlService } from './url.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { UrlSchema } from './entities/url-entity.dto.js';
+import { UrlSchema } from './entities/url-entity.dto';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RedisModule } from '@nestjs-modules/ioredis';
-import { RedisService } from '../redis/redis.service.js';
+import { RedisService } from '../redis/redis.service';
 
 @Module({
   imports: [

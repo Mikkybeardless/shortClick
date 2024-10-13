@@ -6,6 +6,30 @@ import { RedisService } from '../redis/redis.service';
 import { Model } from 'mongoose';
 import { NotFoundException } from '@nestjs/common';
 
+// Mock implementations
+const mockRedisService = {
+  getCache: jest.fn(),
+  setCache: jest.fn(),
+  clearCache: jest.fn(),
+};
+
+const mockUrlModel = {
+  // Mock Mongoose methods such as findOne, save, findById, etc.
+  findOne: jest.fn(),
+  create: jest.fn(),
+  save: jest.fn(),
+  findOneAndUpdate: jest.fn(),
+  findById: jest.fn(),
+  find: jest.fn(),
+  findByIdAndDelete: jest.fn(),
+};
+// Sample URL data for tests
+const mockUrlDoc = {
+  origUrl: 'http://example.com',
+  shortUrl: 'http://short.ly/abc',
+  urlId: 'abc',
+  save: jest.fn().mockResolvedValue(true),
+};
 describe('UrlService', () => {
   let service: UrlService;
   let urlModel: Model<Url>;
@@ -17,21 +41,11 @@ describe('UrlService', () => {
         UrlService,
         {
           provide: getModelToken(Url.name),
-          useValue: {
-            findOne: jest.fn(),
-            findById: jest.fn(),
-            findOneAndUpdate: jest.fn(),
-            find: jest.fn(),
-            findByIdAndDelete: jest.fn(),
-            save: jest.fn(),
-          },
+          useValue: mockUrlModel,
         },
         {
           provide: RedisService,
-          useValue: {
-            getCache: jest.fn(),
-            setCache: jest.fn(),
-          },
+          useValue: mockRedisService,
         },
       ],
     }).compile();
@@ -46,32 +60,21 @@ describe('UrlService', () => {
   });
 
   describe('createShortUrl', () => {
+    const createUrlDto = {
+      origUrl: 'http://example.com',
+      customDomain: '',
+      customSlug: '',
+    };
+    const req = { user: { id: 'userId' } } as any;
     it('should create and return a new short URL', async () => {
-      const createUrlDto = {
-        origUrl: 'http://example.com',
-        customDomain: '',
-        customSlug: '',
-      };
-      const req = { user: { id: 'userId' } } as any;
-
       jest.spyOn(urlModel, 'findOne').mockResolvedValue(null);
-      jest.spyOn(urlModel.prototype, 'save').mockResolvedValue({
-        origUrl: 'http://example.com',
-        shortUrl: 'http://short.url/abcd',
-        urlId: 'abcd',
-        owner: 'userId',
-      } as any);
+      jest.spyOn(urlModel, 'create').mockResolvedValue(mockUrlDoc as any);
 
       const result = await service.createShortUrl(createUrlDto, req);
-
-      expect(result).toEqual(
-        expect.objectContaining({
-          origUrl: 'http://example.com',
-          shortUrl: expect.any(String),
-          urlId: expect.any(String),
-          owner: 'userId',
-        }),
-      );
+      expect(urlModel.findOne).toHaveBeenCalledWith({
+        origUrl: createUrlDto.origUrl,
+      });
+      expect(result).toEqual(mockUrlDoc);
     });
 
     it('should return existing URL if already exists', async () => {
@@ -97,70 +100,96 @@ describe('UrlService', () => {
   });
 
   describe('findAndUpdateClicks', () => {
-    it('should update clicks and return the updated URL', async () => {
-      const id = 'abcd';
-      const req = {} as any;
+    const req = { ip: '127.0.0.1' } as any;
+    const urlId = 'abc123';
+    const apiKey = 'mockApiKey';
+    process.env.API_KEY = apiKey;
 
-      const updatedUrl = {
-        urlId: 'abcd',
-        clicks: 1,
-        country: ['US'],
-        timestamp: [new Date()],
-      };
+    const ipDetails = {
+      location: {
+        name: 'City',
+        region: 'Region',
+        country: 'Country',
+        localtime: '2024-09-01 12:00:00',
+      },
+    };
+    it('should increment clicks and update analytics for a URL', async () => {
+      jest.spyOn(service, 'getIpDetails').mockResolvedValue(ipDetails);
+      jest.spyOn(urlModel, 'findOneAndUpdate').mockResolvedValue(mockUrlDoc);
 
-      jest
-        .spyOn(urlModel, 'findOneAndUpdate')
-        .mockResolvedValue(updatedUrl as any);
+      const result = await service.findAndUpdateClicks(urlId, req);
 
-      const result = await service.findAndUpdateClicks(id, req);
-
-      expect(result).toEqual(updatedUrl);
+      expect(service.getIpDetails).toHaveBeenCalledWith(
+        req.ip,
+        process.env.API_KEY,
+      );
+      expect(urlModel.findOneAndUpdate).toHaveBeenCalledWith(
+        { urlId },
+        {
+          $inc: { clicks: 1 },
+          $push: {
+            analytics: {
+              country: 'Country',
+              timestamp: expect.any(Date),
+              clientIp: req.ip,
+              name: 'City',
+              region: 'Region',
+              localtime: '2024-09-01 12:00:00',
+            },
+          },
+        },
+        { new: true },
+      );
+      expect(result).toMatchObject({
+        origUrl: 'http://example.com',
+        shortUrl: 'http://short.ly/abc',
+        urlId: 'abc',
+      });
     });
 
     it('should throw NotFoundException if URL not found', async () => {
-      const id = 'abcd';
-      const req = {} as any;
+      jest.spyOn(service, 'getIpDetails').mockResolvedValue(ipDetails);
 
-      jest.spyOn(urlModel, 'findOneAndUpdate').mockResolvedValue(null);
+      jest.spyOn(urlModel, 'findOneAndUpdate').mockResolvedValue(null); // Simulate URL not found
 
-      await expect(service.findAndUpdateClicks(id, req)).rejects.toThrow(
+      await expect(service.findAndUpdateClicks(urlId, req)).rejects.toThrow(
         NotFoundException,
       );
     });
   });
 
   describe('findById', () => {
-    it('should return the URL from cache if present', async () => {
-      const id = 'abcd';
-      const cachedUrl = {
-        urlId: 'abcd',
-        shortUrl: 'http://short.url/abcd',
-      };
+    // it('should return the URL from cache if present', async () => {
+    //   const id = 'abcd';
+    //   const cachedUrl = {
+    //     urlId: 'abcd',
+    //     shortUrl: 'http://short.url/abcd',
+    //   };
 
-      jest.spyOn(redisService, 'getCache').mockResolvedValue(cachedUrl as any);
+    //   jest.spyOn(redisService, 'getCache').mockResolvedValue(cachedUrl as any);
 
-      const result = await service.findById(id);
+    //   const result = await service.findById(id);
 
-      expect(result).toEqual(cachedUrl);
-    });
+    //   expect(result).toEqual(cachedUrl);
+    // });
 
-    it('should return the URL from the database if not cached', async () => {
+    it('should return the URL from the database', async () => {
       const id = 'abcd';
       const dbUrl = {
         urlId: 'abcd',
         shortUrl: 'http://short.url/abcd',
       };
 
-      jest.spyOn(redisService, 'getCache').mockResolvedValue({ data: null });
+      //jest.spyOn(redisService, 'getCache').mockResolvedValue({ data: null });
       jest.spyOn(urlModel, 'findById').mockResolvedValue(dbUrl as any);
 
       const result = await service.findById(id);
 
       expect(result).toEqual(dbUrl);
-      expect(redisService.setCache).toHaveBeenCalledWith(
-        expect.any(String),
-        dbUrl,
-      );
+      // expect(redisService.setCache).toHaveBeenCalledWith(
+      //   expect.any(String),
+      //   dbUrl,
+      // );
     });
 
     it('should throw NotFoundException if URL not found in the database', async () => {

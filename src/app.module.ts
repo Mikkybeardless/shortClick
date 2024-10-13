@@ -9,6 +9,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { RedisService } from './redis/redis.service';
 import { RedisModule } from '@nestjs-modules/ioredis';
+import { AllExceptionsFilter } from './exception/globalException';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { RedisModule } from '@nestjs-modules/ioredis';
       useClass: ThrottlerGuard,
     },
     RedisService,
+    AllExceptionsFilter,
   ],
 })
 export class AppModule {}
