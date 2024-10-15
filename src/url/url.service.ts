@@ -52,6 +52,11 @@ export class UrlService {
     }
   }
 
+  private validateUrl = (value: string) => {
+    const urlPattern =
+      /^(https?:\/\/)?([\w\d-]+\.)+\w{2,}(\/[\w\d-.,@?^=%&:/~+#]*)?$/i;
+    return urlPattern.test(value);
+  };
   public getIpDetails = async (
     ip: string | undefined,
     key: string | undefined,
@@ -68,10 +73,19 @@ export class UrlService {
     const { origUrl, customDomain, customSlug } = createUrlDto;
     const owner = req.user?.id;
     console.log(owner);
+
+    const isValidUrl = this.validateUrl(origUrl);
+
+    if (isValidUrl !== true) {
+      throw new BadRequestException('Invalid URL');
+    }
+
     const existingUrl = await this.urlModel.findOne({ origUrl: origUrl });
     if (existingUrl) {
       return existingUrl;
     }
+
+    
     // Generate a unique identifier for the short URL
     let urlId = customSlug || this.generateShortId();
 
@@ -90,7 +104,7 @@ export class UrlService {
       owner,
     });
 
-    return newUrl;
+    return newUrl
   }
 
   async findAndUpdateClicks(id: string, req: Request) {

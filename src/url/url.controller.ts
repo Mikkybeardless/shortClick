@@ -29,7 +29,12 @@ export class UrlController {
     @Body() createUrlDto: CreateUrlDto,
     @Req() req: Request & { user: UserPayload | undefined },
   ) {
-    return this.urlService.createShortUrl(createUrlDto, req);
+    const url = await this.urlService.createShortUrl(createUrlDto, req);
+    return {
+      statusCode: 201,
+      message: 'URL successfully shortened',
+      data: url
+    }
   }
 
   @Post('/free')
@@ -37,7 +42,12 @@ export class UrlController {
     @Body() createUrlDto: CreateUrlDto,
     @Req() req: Request & { user: UserPayload | undefined },
   ) {
-    return this.urlService.createShortUrl(createUrlDto, req);
+    const url = await this.urlService.createShortUrl(createUrlDto, req);
+    return {
+      statusCode: 201,
+      message: 'URL successfully shortened',
+      data: url
+    }
   }
 
   @UseGuards(AuthGuard)
@@ -46,6 +56,7 @@ export class UrlController {
     const response = await this.urlService.createQrCode(urlData, res);
 
     return {
+      statusCode: 200,
       message: 'QRcode successfully created',
       QrCode: response,
     };
@@ -67,7 +78,8 @@ export class UrlController {
 
   @UseGuards(AuthGuard)
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  async remove(@Param('id') id: string) {
     return this.urlService.removeUrl(id);
+
   }
 }
