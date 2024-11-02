@@ -6,11 +6,11 @@ import { Redis } from 'ioredis';
 export class RedisService {
   constructor(@InjectRedis() private readonly redis: Redis) {}
   async getCache(key: string) {
-    const data = await this.redis.get(key);
-    return { data };
+    const cachedData = await this.redis.get(key);
+    return cachedData ? JSON.parse(cachedData) : null;
   }
   async setCache(key: string, value: any, ttlInSeconds: number) {
-    await this.redis.set(key, value);
+    await this.redis.set(key, JSON.stringify(value));
     if (ttlInSeconds) {
       await this.redis.expire(key, ttlInSeconds);
     }

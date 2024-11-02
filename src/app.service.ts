@@ -9,25 +9,24 @@ export class AppService {
     return `Hello World Igashi from ${base}!`;
   }
   async testCache() {
-    console.log('Cache Manager Instance:', this.redisService);
-    console.log(
-      'Available Methods:',
-      Object.getOwnPropertyNames(Object.getPrototypeOf(this.redisService)),
-    );
-    await this.redisService.setCache('test_key', 'test_value', 360);
-
+    // console.log('Cache Manager Instance:', this.redisService);
+    // console.log(
+    //   'Available Methods:',
+    //   Object.getOwnPropertyNames(Object.getPrototypeOf(this.redisService)),
+    // );
+    
+    await this.redisService.clearCache();
     // Get the value from the cache
     const value = await this.redisService.getCache('test_key');
+    console.log(typeof value);
+    if (value !== null && value !== undefined) {
+      return JSON.stringify(value);
+    }
 
-    console.log(
-      'redisUrl',
-      process.env.REDIS_URL,
-      process.env.MONGODB_URL,
-      process.env.JWT_SECRET,
-      process.env.BASE,
-      process.env.PORT,
-    );
+    await this.redisService.setCache('test_key', 'test_value', 360);
 
-    return value;
+    return JSON.stringify('fresh data');
+    
+
   }
 }

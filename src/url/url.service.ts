@@ -3,14 +3,12 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
-  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import QRCode from 'qrcode';
 import { Request, Response } from 'express';
 import axios from 'axios';
-
 import { Url } from './entities/url-entity.dto';
 import { CreateUrlDto } from './dto/create-url.dto';
 import { UserPayload } from '../auth/auth.service';
@@ -48,6 +46,7 @@ export class UrlService {
 
       return qrCodeDataUrl;
     } catch (error) {
+      console.log(error);
       throw new Error('Failed to generate QR code');
     }
   }
@@ -85,7 +84,6 @@ export class UrlService {
       return existingUrl;
     }
 
-    
     // Generate a unique identifier for the short URL
     let urlId = customSlug || this.generateShortId();
 
@@ -104,7 +102,7 @@ export class UrlService {
       owner,
     });
 
-    return newUrl
+    return newUrl;
   }
 
   async findAndUpdateClicks(id: string, req: Request) {
@@ -192,13 +190,25 @@ export class UrlService {
   async findAll(req: Request & { user: UserPayload | undefined }) {
     const owner = req.user?.id;
 
-    console.log(req.user);
+    console.log(owner);
+    const cachedData = await this.redisService.getCache('owner_URLs');
 
+    if (cachedData !== null && cachedData !== undefined) {
+      console.log('returning data from cache');
+      return {
+        message: `urls created by user with id ${owner}`,
+        data: cachedData,
+        statusCode: 200,
+      };
+    }
     const urls = await this.urlModel.find({ owner: owner });
+
     if (!urls) {
       throw new NotFoundException('URLs not found');
     }
-
+    console.log('Cache miss setting data in cache');
+    await this.redisService.setCache('owner_URLs', urls, 3000);
+    console.log('returning data from DB');
     return {
       message: `urls created by user with id ${owner}`,
       data: urls,
