@@ -52,13 +52,14 @@ export class UrlController {
 
   @UseGuards(AuthGuard)
   @Put('/qrcode')
-  async getQrCode(@Body() urlData: CreateQRcodeDto, @Res() res: Response) {
-    const response = await this.urlService.createQrCode(urlData, res);
+  async getQrCode(@Body() urlData: CreateQRcodeDto) {
+
+    const qrCodeBuffer = await this.urlService.createQrCode(urlData);
 
     return {
       statusCode: 200,
       message: 'QRcode successfully created',
-      QrCode: response,
+      QrCode: `data:image/png;base64,${qrCodeBuffer.toString('base64')}`,
     };
   }
 

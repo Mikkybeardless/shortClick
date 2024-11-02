@@ -148,19 +148,13 @@ export class UrlService {
     return url;
   }
 
-  async createQrCode(urlData: CreateQRcodeDto, res: Response) {
+  async createQrCode(urlData: CreateQRcodeDto) {
     const { url } = urlData;
     const existingUrl = await this.urlModel.findOne({ shortUrl: url });
 
     if (existingUrl?.qrCode) {
       const img = existingUrl.qrCode;
-
-      res.writeHead(200, {
-        'Content-Type': 'image/png',
-        'Content-Length': img.length,
-      });
-
-      return res.end(img);
+      return img
     }
     const qrCodeDataUrl = await this.generateQrCode(url);
     console.log(qrCodeDataUrl);
@@ -177,14 +171,7 @@ export class UrlService {
       throw new NotFoundException('URL not found');
     }
 
-    const img = qrCode;
-
-    res.writeHead(200, {
-      'Content-Type': 'image/png',
-      'Content-Length': img.length,
-    });
-
-    return res.end(img);
+    return qrCode;
   }
 
   async findAll(req: Request & { user: UserPayload | undefined }) {
