@@ -150,14 +150,8 @@ export class UrlService {
 
   async createQrCode(urlData: CreateQRcodeDto) {
     const { url } = urlData;
-    const existingUrl = await this.urlModel.findOne({ shortUrl: url });
 
-    if (existingUrl?.qrCode) {
-      const img = existingUrl.qrCode;
-      return img
-    }
     const qrCodeDataUrl = await this.generateQrCode(url);
-    console.log(qrCodeDataUrl);
     const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
     const qrCode = Buffer.from(base64Data, 'base64');
     const dbUrl = await this.urlModel.findOneAndUpdate(
@@ -171,6 +165,8 @@ export class UrlService {
       throw new NotFoundException('URL not found');
     }
 
+
+    console.log('returning data from DB');
     return qrCode;
   }
 
