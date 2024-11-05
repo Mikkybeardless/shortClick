@@ -10,9 +10,12 @@ import { APP_GUARD } from '@nestjs/core';
 import { RedisService } from './redis/redis.service';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import { AllExceptionsFilter } from './exception/globalException';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TasksService } from './cron.service';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({ isGlobal: true }),
     RedisModule.forRoot({
       type: 'single',
@@ -33,6 +36,7 @@ import { AllExceptionsFilter } from './exception/globalException';
   controllers: [AppController],
   providers: [
     AppService,
+    TasksService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
