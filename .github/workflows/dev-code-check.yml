@@ -1,0 +1,48 @@
+name: Dev Code Quality Checks
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  code-quality-check:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      # Step 1: Checkout Code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Node.js
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      # Step 3: Install Dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Step 4: Run Linter
+      - name: Run Linter
+        run: npm run lint
+
+      # Step 5: Run Prettier Check
+      - name: Run Prettier Check
+        run: npx prettier --check "**/*.ts"
+
+      # Step 6: Run Unit Tests
+      - name: Run Unit Tests
+        run: npm run test:cov
+
+      # Step 7: Build Project
+      - name: Build Application
+        run: npm run build
