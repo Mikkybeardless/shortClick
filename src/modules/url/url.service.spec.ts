@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
 import { UrlService } from './url.service';
 import { Url } from './entities/url-entity.dto';
-import { RedisService } from '../redis/redis.service';
+// import { RedisService } from '../redis/redis.service';
 import { Model } from 'mongoose';
 import { NotFoundException } from '@nestjs/common';
 
@@ -33,7 +33,7 @@ const mockUrlDoc = {
 describe('UrlService', () => {
   let service: UrlService;
   let urlModel: Model<Url>;
-  let redisService: RedisService;
+  // let redisService: RedisService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -43,16 +43,16 @@ describe('UrlService', () => {
           provide: getModelToken(Url.name),
           useValue: mockUrlModel,
         },
-        {
-          provide: RedisService,
-          useValue: mockRedisService,
-        },
+        // {
+        //   provide: RedisService,
+        //   useValue: mockRedisService,
+        // },
       ],
     }).compile();
 
     service = module.get<UrlService>(UrlService);
     urlModel = module.get<Model<Url>>(getModelToken(Url.name));
-    redisService = module.get<RedisService>(RedisService);
+    // redisService = module.get<RedisService>(RedisService);
   });
 
   it('should be defined', () => {

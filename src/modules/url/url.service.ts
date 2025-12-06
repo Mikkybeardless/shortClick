@@ -5,15 +5,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import QRCode from 'qrcode';
-import { Request, Response } from 'express';
+import { Request } from 'express';
 import axios from 'axios';
 import { Url } from './entities/url-entity.dto';
 import { CreateUrlDto } from './dto/create-url.dto';
-import { UserPayload } from '../auth/auth.service';
 import { CreateQRcodeDto } from './dto/create-qrCode.dto';
-import { RedisService } from '../redis/redis.service';
+import { SYSTEM_MESSAGES } from 'src/common/constants/system-messages';
+// import { RedisService } from '../redis/redis.service';
 
 type resp = {
   message: string;
@@ -23,7 +23,7 @@ type resp = {
 export class UrlService {
   constructor(
     @InjectModel(Url.name) private urlModel: Model<Url>,
-    private redisService: RedisService,
+    // private redisService: RedisService,
   ) {}
 
   private generateShortId(): string {
@@ -43,11 +43,9 @@ export class UrlService {
     try {
       // Generate QR code as a data URL (base64 string)
       const qrCodeDataUrl = await QRCode.toDataURL(url);
-
       return qrCodeDataUrl;
     } catch (error) {
-      console.log(error);
-      throw new Error('Failed to generate QR code');
+      throw new Error(SYSTEM_MESSAGES.FAIL_TO_GENERATE_QR);
     }
   }
 
@@ -56,27 +54,26 @@ export class UrlService {
       /^(https?:\/\/)?([\w\d-]+\.)+\w{2,}(\/[\w\d-.,@?^=%&:/~+#]*)?$/i;
     return urlPattern.test(value);
   };
-  public getIpDetails = async (
-    ip: string | undefined,
-    key: string | undefined,
-  ) => {
-    const url = `http://api.weatherapi.com/v1/current.json?key=${key}&q=${ip}`;
-    const response = await axios.get(url);
-    return response.data;
+  public getIpDetails = async (ip: string | undefined) => {
+    const key: string | undefined = process.env.WEATHER_API_KEY;
+    const base = process.env.WEATHER_API_URL;
+    const url = `${base}?key=${key}&q=${ip}`;
+
+    try {
+      const response = await axios.get(url);
+      return response.data;
+    } catch (error) {
+      throw new Error('failed to get ip details');
+    }
   };
 
-  async createShortUrl(
-    createUrlDto: CreateUrlDto,
-    req: Request & { user: UserPayload | undefined },
-  ): Promise<Url> {
+  async createShortUrl(createUrlDto: CreateUrlDto, userId: DbId): Promise<Url> {
     const { origUrl, customDomain, customSlug } = createUrlDto;
-    const owner = req.user?.id;
-    console.log(owner);
-
+    const owner = userId;
     const isValidUrl = this.validateUrl(origUrl);
 
     if (isValidUrl !== true) {
-      throw new BadRequestException('Invalid URL');
+      throw new BadRequestException(SYSTEM_MESSAGES.URL_INVALID);
     }
 
     const existingUrl = await this.urlModel.findOne({ origUrl: origUrl });
@@ -106,12 +103,10 @@ export class UrlService {
   }
 
   async findAndUpdateClicks(id: string, req: Request) {
-    const key: string | undefined = process.env.API_KEY;
     const ip: string | undefined = req.ip;
-    const ipDetails = await this.getIpDetails(ip, key);
+    const ipDetails = await this.getIpDetails(ip);
     const { name, region, country, localtime } = ipDetails.location;
 
-    console.log(name, region, country, localtime);
     const timestamp = new Date();
 
     const url = await this.urlModel.findOneAndUpdate(
@@ -133,7 +128,7 @@ export class UrlService {
     );
 
     if (!url) {
-      throw new NotFoundException('Url not found');
+      throw new NotFoundException(SYSTEM_MESSAGES.URL_NOT_FOUND);
     }
 
     return url;
@@ -142,15 +137,13 @@ export class UrlService {
   async findById(id: string) {
     const url = await this.urlModel.findById(id);
     if (!url) {
-      throw new NotFoundException('URL with this id not not found');
+      throw new NotFoundException(SYSTEM_MESSAGES.URL_NOT_FOUND);
     }
-
     return url;
   }
 
   async createQrCode(urlData: CreateQRcodeDto) {
     const { url } = urlData;
-
     const qrCodeDataUrl = await this.generateQrCode(url);
     const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, '');
     const qrCode = Buffer.from(base64Data, 'base64');
@@ -162,50 +155,40 @@ export class UrlService {
       { new: true },
     );
     if (!dbUrl) {
-      throw new NotFoundException('URL not found');
+      throw new NotFoundException(SYSTEM_MESSAGES.URL_NOT_FOUND);
     }
 
-
-    console.log('returning data from DB');
     return qrCode;
   }
 
-  async findAll(req: Request & { user: UserPayload | undefined }) {
-    const owner = req.user?.id;
+  async findAll(userId: DbId) {
+    const owner = userId;
 
     console.log(owner);
-    const cachedData = await this.redisService.getCache('owner_URLs');
+    // const cachedData = await this.redisService.getCache('owner_URLs');
 
-    if (cachedData !== null && cachedData !== undefined) {
-      console.log('returning data from cache');
-      return {
-        message: `urls created by user with id ${owner}`,
-        data: cachedData,
-        statusCode: 200,
-      };
-    }
+    // if (cachedData !== null && cachedData !== undefined) {
+    //   console.log('returning data from cache');
+    //   return {
+    //     message: `urls created by user with id ${owner}`,
+    //     data: cachedData,
+    //     statusCode: 200,
+    //   };
+    // }
     const urls = await this.urlModel.find({ owner: owner });
 
     if (!urls) {
       throw new NotFoundException('URLs not found');
     }
     console.log('Cache miss setting data in cache');
-    await this.redisService.setCache('owner_URLs', urls, 3000);
+    // await this.redisService.setCache('owner_URLs', urls, 3000);
     console.log('returning data from DB');
-    return {
-      message: `urls created by user with id ${owner}`,
-      data: urls,
-      statusCode: 200,
-    };
+    return urls;
   }
 
-  async removeUrl(id: string): Promise<resp> {
+  async removeUrl(id: string) {
     const url = await this.urlModel.findByIdAndDelete(id);
-
-    if (!url) throw new NotFoundException('URL not found');
-    return {
-      message: `url with id ${id} deleted successfully`,
-      statusCode: 200,
-    };
+    if (!url) throw new NotFoundException(SYSTEM_MESSAGES.URL_NOT_FOUND);
+    return;
   }
 }

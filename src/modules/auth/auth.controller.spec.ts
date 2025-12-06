@@ -4,7 +4,7 @@ import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { Auth } from './entities/auth.entity';
 import { getModelToken } from '@nestjs/mongoose';
-import { AuthGuard } from './auth.guard';
+import { AuthGuard } from './guards/auth.guard';
 import { NotFoundException } from '@nestjs/common';
 
 const mockAuthModel = {

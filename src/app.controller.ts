@@ -8,7 +8,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { AppService } from './app.service';
-import { UrlService } from './url/url.service';
+import { UrlService } from './modules/url/url.service';
 import { Request } from 'express';
 
 @Controller()

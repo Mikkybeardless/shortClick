@@ -3,9 +3,9 @@ import { UrlController } from './url.controller';
 import { UrlService } from './url.service';
 import { Url } from './entities/url-entity.dto';
 import { getModelToken } from '@nestjs/mongoose';
-import { RedisService } from '../redis/redis.service';
+// import { RedisService } from '../redis/redis.service';
 import { JwtService } from '@nestjs/jwt'; // Import JwtService
-import { AuthGuard } from '../auth/auth.guard';
+import { AuthGuard } from '../auth/guards/auth.guard';
 
 const mockUrlModel = {
   // Mock Mongoose methods such as findOne, save, findById, etc.
@@ -44,10 +44,10 @@ describe('UrlController', () => {
       providers: [
         UrlService,
         { provide: getModelToken(Url.name), useValue: mockUrlModel },
-        {
-          provide: RedisService,
-          useValue: mockRedisService,
-        },
+        // {
+        //   provide: RedisService,
+        //   useValue: mockRedisService,
+        // },
         {
           provide: JwtService,
           useValue: mockJwtService,

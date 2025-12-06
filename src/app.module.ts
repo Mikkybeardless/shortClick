@@ -1,29 +1,27 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AuthModule } from './auth/auth.module';
-import { UrlModule } from './url/url.module';
-import { MongooseModule } from '@nestjs/mongoose';
+import { AuthModule } from './modules/auth/auth.module';
+import { UrlModule } from './modules/url/url.module';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { RedisService } from './redis/redis.service';
-import { RedisModule } from '@nestjs-modules/ioredis';
-import { AllExceptionsFilter } from './exception/globalException';
+import { AllExceptionsFilter } from './common/exception/globalException';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TasksService } from './cron.service';
+import { LoggerModule } from './common/logger/logger.module';
+import { AppConfigModule } from './config/config.module';
+import { MongooseDatabaseModule } from './database/mongoose.module';
+import { JwtGlobalModule } from './common/jwt/jwt.module';
 
 @Module({
   imports: [
+    AppConfigModule,
     ScheduleModule.forRoot(),
+    LoggerModule,
     ConfigModule.forRoot({ isGlobal: true }),
-    RedisModule.forRoot({
-      type: 'single',
-      url: process.env.REDIS_URL,
-    }),
-
-    MongooseModule.forRoot(process.env.MONGODB_URL!),
-
+    JwtGlobalModule,
+    MongooseDatabaseModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60 * 60,
@@ -41,7 +39,6 @@ import { TasksService } from './cron.service';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
-    RedisService,
     AllExceptionsFilter,
   ],
 })

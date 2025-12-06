@@ -3,41 +3,19 @@ import {
   Body,
   Injectable,
   NotFoundException,
-  Res,
   UnauthorizedException,
 } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { Auth } from './entities/auth.entity';
-import { Model, ObjectId } from 'mongoose';
+import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { SigninDto } from './dto/signin-auth.dto';
 import { Types } from 'mongoose';
 import _ from 'lodash';
-
-
-export interface UserPayload {
-  role: 'user' | 'admin';
-  email: string;
-  name: string;
-  id: Types.ObjectId;
-  sub: Types.ObjectId;
-}
-
-interface FindAllQuery {
-  email?: string;
-  username?: string;
-  page?: number;
-}
-interface User{
-  email: string;
-  password?: string;
-  username: string;
-  role?: 'user' | 'admin';
-  _id: Types.ObjectId
-}
+import { SYSTEM_MESSAGES } from 'src/common/constants/system-messages';
 
 @Injectable()
 export class AuthService {
@@ -63,9 +41,9 @@ export class AuthService {
       sub: user._id,
     };
 
-    const token = await this.jwtService.signAsync(payload)
-    return token
-  }
+    const token = await this.jwtService.signAsync(payload);
+    return token;
+  };
 
   // Comparing a password
   async comparePassword(plainPassword: string, hash: string): Promise<boolean> {
@@ -77,7 +55,7 @@ export class AuthService {
     const existingUser = await this.authModel.findOne({ email });
 
     if (existingUser) {
-      throw new UnauthorizedException('User already exists');
+      throw new UnauthorizedException(SYSTEM_MESSAGES.AUTH_USER_EXISTS);
     }
 
     password = await this.hashPassword(password);
@@ -96,9 +74,9 @@ export class AuthService {
 
     return {
       statusCode: 201,
-      message: 'User created successfully',
+      message: SYSTEM_MESSAGES.AUTH_REGISTER_SUCCESS,
       data: user,
-      accessToken: token
+      accessToken: token,
     };
   }
 
@@ -119,9 +97,9 @@ export class AuthService {
     const UserPayload = _.omit(user.toObject(), ['password']);
     return {
       statusCode: 200,
-      message: 'Login successful',
+      message: SYSTEM_MESSAGES.AUTH_LOGIN_SUCCESS,
       data: UserPayload,
-      access_token: token
+      access_token: token,
     };
   }
 
@@ -135,7 +113,7 @@ export class AuthService {
     const auths = await this.authModel.find({ ...query });
 
     return {
-      message: 'Auth retrieved successfully',
+      message: SYSTEM_MESSAGES.AUTH_USER_RETRIEVE_SUCCESS,
       data: auths,
     };
   }
@@ -163,7 +141,7 @@ export class AuthService {
     }
 
     return {
-      message: 'Auth credentials successfully updated',
+      message: SYSTEM_MESSAGES.UPDATE_SUCCESS,
       data: {
         user,
       },
@@ -173,7 +151,7 @@ export class AuthService {
   async remove(id: string) {
     await this.authModel.findByIdAndDelete(id);
     return {
-      message: `Auth with id ${id} deleted successfully`,
+      message: SYSTEM_MESSAGES.DELETE_SUCCESS,
     };
   }
 }
