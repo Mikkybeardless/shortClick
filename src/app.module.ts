@@ -13,6 +13,7 @@ import { LoggerModule } from './common/logger/logger.module';
 import { AppConfigModule } from './config/config.module';
 import { MongooseDatabaseModule } from './database/mongoose.module';
 import { JwtGlobalModule } from './common/jwt/jwt.module';
+import { GlobalRedisModule } from './common/redis/redis.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { JwtGlobalModule } from './common/jwt/jwt.module';
     LoggerModule,
     ConfigModule.forRoot({ isGlobal: true }),
     JwtGlobalModule,
+    GlobalRedisModule,
     MongooseDatabaseModule,
     ThrottlerModule.forRoot([
       {

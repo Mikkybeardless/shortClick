@@ -5,6 +5,6 @@ import { WinstonLogger } from './winston.logger';
 @Global()
 @Module({
   providers: [CombinedLogger, WinstonLogger],
-  exports: [CombinedLogger],
+  exports: [CombinedLogger, WinstonLogger],
 })
 export class LoggerModule {}

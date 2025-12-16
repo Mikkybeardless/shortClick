@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import QRCode from 'qrcode';
 import { Request } from 'express';
 import axios from 'axios';
@@ -13,17 +13,13 @@ import { Url } from './entities/url-entity.dto';
 import { CreateUrlDto } from './dto/create-url.dto';
 import { CreateQRcodeDto } from './dto/create-qrCode.dto';
 import { SYSTEM_MESSAGES } from 'src/common/constants/system-messages';
-// import { RedisService } from '../redis/redis.service';
+import { RedisService } from 'src/common/redis/redis.service';
 
-type resp = {
-  message: string;
-  statusCode: number;
-};
 @Injectable()
 export class UrlService {
   constructor(
     @InjectModel(Url.name) private urlModel: Model<Url>,
-    // private redisService: RedisService,
+    private redisService: RedisService,
   ) {}
 
   private generateShortId(): string {
@@ -31,11 +27,9 @@ export class UrlService {
     const chars =
       'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let id = '';
-
     for (let i = 0; i < 4; i++) {
       id += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-
     return id;
   }
 
@@ -80,16 +74,12 @@ export class UrlService {
     if (existingUrl) {
       return existingUrl;
     }
-
     // Generate a unique identifier for the short URL
     let urlId = customSlug || this.generateShortId();
-
     const existingId = await this.urlModel.findOne({ urlId: urlId });
     if (existingId) urlId = this.generateShortId(); //regenerate urlId
-
     const base = customDomain || process.env.BASE;
     const shortUrl = `${base}/${urlId}`;
-
     const newUrl = await this.urlModel.create({
       origUrl,
       shortUrl,
@@ -165,24 +155,20 @@ export class UrlService {
     const owner = userId;
 
     console.log(owner);
-    // const cachedData = await this.redisService.getCache('owner_URLs');
+    const cachedUrls = await this.redisService.getCache('owner_URLs');
 
-    // if (cachedData !== null && cachedData !== undefined) {
-    //   console.log('returning data from cache');
-    //   return {
-    //     message: `urls created by user with id ${owner}`,
-    //     data: cachedData,
-    //     statusCode: 200,
-    //   };
-    // }
+    if (cachedUrls !== null && cachedUrls !== undefined) {
+      console.log('returning data from cache');
+      return cachedUrls;
+    }
     const urls = await this.urlModel.find({ owner: owner });
 
     if (!urls) {
       throw new NotFoundException('URLs not found');
     }
-    console.log('Cache miss setting data in cache');
-    // await this.redisService.setCache('owner_URLs', urls, 3000);
-    console.log('returning data from DB');
+    // console.log('Cache miss setting data in cache');
+    await this.redisService.setCache('owner_URLs', urls, 3000);
+    // console.log('returning data from DB');
     return urls;
   }
 
