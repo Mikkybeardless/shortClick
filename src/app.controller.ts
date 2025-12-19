@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Put,
-  Redirect,
-  Req,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Controller, Get, Param, Redirect, Req } from '@nestjs/common';
 import { AppService } from './app.service';
 import { UrlService } from './modules/url/url.service';
 import { Request } from 'express';
