@@ -92,6 +92,35 @@ export class UrlService {
     return newUrl;
   }
 
+  async createFreeShortUrl(createUrlDto: CreateUrlDto): Promise<Url> {
+    const { origUrl, customDomain, customSlug } = createUrlDto;
+    const isValidUrl = this.validateUrl(origUrl);
+
+    if (isValidUrl !== true) {
+      throw new BadRequestException(SYSTEM_MESSAGES.URL_INVALID);
+    }
+
+    const existingUrl = await this.urlModel.findOne({ origUrl: origUrl });
+    if (existingUrl) {
+      return existingUrl;
+    }
+    // Generate a unique identifier for the short URL
+    let urlId = customSlug || this.generateShortId();
+    const existingId = await this.urlModel.findOne({ urlId: urlId });
+    if (existingId) urlId = this.generateShortId(); //regenerate urlId
+    const base = customDomain || process.env.BASE;
+    const shortUrl = `${base}/${urlId}`;
+    const newUrl = await this.urlModel.create({
+      origUrl,
+      shortUrl,
+      urlId,
+      customDomain,
+      customSlug,
+    });
+
+    return newUrl;
+  }
+
   async findAndUpdateClicks(id: string, req: Request) {
     const ip: string | undefined = req.ip;
     const ipDetails = await this.getIpDetails(ip);

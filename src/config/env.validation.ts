@@ -21,4 +21,8 @@ export const validationSchema = Joi.object({
   // weather API
   WEATHER_API_KEY: Joi.string().required(),
   WEATHER_API_URL: Joi.string().required(),
+
+  // Resend Email Service
+  RESEND_API_KEY: Joi.string().required(),
+  RESEND_FROM_EMAIL: Joi.string().email().required(),
 });

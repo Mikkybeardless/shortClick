@@ -17,7 +17,6 @@ import { CreateQRcodeDto } from './dto/create-qrCode.dto';
 import { SYSTEM_MESSAGES } from 'src/common/constants/system-messages';
 import { Roles, SkipAuth } from '../auth/decorators';
 import { GetUser } from '../auth/decorators';
-import { Types } from 'mongoose';
 import { RoleGuard } from '../auth/guards/role.guard';
 import { Role } from '../auth/role/roles.enum';
 import {
@@ -57,11 +56,8 @@ export class UrlController {
     description: 'Short URL successfully created for free user.',
   })
   @Post('/free')
-  async createFree(
-    @Body() createUrlDto: CreateUrlDto,
-    @GetUser('_id') userId: DbId,
-  ) {
-    const url = await this.urlService.createShortUrl(createUrlDto, userId);
+  async createFree(@Body() createUrlDto: CreateUrlDto) {
+    const url = await this.urlService.createFreeShortUrl(createUrlDto);
     return {
       statusCode: 201,
       message: SYSTEM_MESSAGES.URL_CREATE_SUCCESS,

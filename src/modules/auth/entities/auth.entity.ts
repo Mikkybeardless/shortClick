@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document } from 'mongoose';
 
 import { Role } from '../role/roles.enum';
 
@@ -17,6 +17,12 @@ export class Auth {
 
   @Prop({ required: true })
   password: string;
+
+  @Prop()
+  resetPasswordToken?: string;
+
+  @Prop()
+  resetPasswordTokenExpiresAt?: Date;
 
   @Prop({ required: true, default: Role.User })
   role?: Role;

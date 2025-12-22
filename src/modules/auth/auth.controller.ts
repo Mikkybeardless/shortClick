@@ -11,8 +11,6 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
-  Redirect,
-  Request,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
@@ -27,6 +25,9 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { SYSTEM_MESSAGES } from 'src/common/constants/system-messages';
+import { ResetPasswordAuthDto } from './dto/resetPassword-auth.dto';
+import { ForgotPasswordAuthDto } from './dto/forgotPassword-auth.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -41,20 +42,12 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'User successfully registered.' })
   @SkipAuth()
   signUp(@Body() createDto: CreateAuthDto) {
-    return this.authService.signUp(createDto);
-  }
-
-  // Get sign up page
-
-  @Get('register')
-  @Redirect('https://localhost:3000/registerTest')
-  getRegisterPage() {
-    return `registration page`;
-  }
-
-  @Get('profile')
-  getProfile(@Request() req: Request & { user: UserPayload | undefined }) {
-    return req.user;
+    const result = this.authService.signUp(createDto);
+    return {
+      statusCode: HttpStatus.CREATED,
+      message: SYSTEM_MESSAGES.AUTH_REGISTER_SUCCESS,
+      ...result,
+    };
   }
 
   @Get('users')
@@ -70,7 +63,12 @@ export class AuthController {
     @Query('username') username: string,
     @Query('page') page: number,
   ) {
-    return this.authService.findAll({ email, username, page });
+    const result = this.authService.findAll({ email, username, page });
+    return {
+      statusCode: HttpStatus.OK,
+      message: SYSTEM_MESSAGES.SUCCESS,
+      ...result,
+    };
   }
 
   // PATCH /auths/:id
@@ -100,15 +98,46 @@ export class AuthController {
     )
     signInDto: SigninDto,
   ) {
-    return this.authService.signIn(signInDto);
+    const result = this.authService.signIn(signInDto);
+    return {
+      statusCode: HttpStatus.OK,
+      message: SYSTEM_MESSAGES.AUTH_LOGIN_SUCCESS,
+      ...result,
+    };
   }
 
-  // Get sign in page
-  @Get('login')
+  // Forgot password
+  @HttpCode(HttpStatus.OK)
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'User forgot password' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset link sent successfully.',
+  })
   @SkipAuth()
-  @Redirect('https://localhost:3000/login')
-  getLoginPage() {
-    return `login page`;
+  forgotPassword(@Body() forgotDto: ForgotPasswordAuthDto) {
+    const { email, resetUrl } = forgotDto;
+    const result = this.authService.forgotPassword(email, resetUrl);
+    return {
+      statusCode: HttpStatus.OK,
+      message: SYSTEM_MESSAGES.SUCCESS,
+      ...result,
+    };
+  }
+
+  // Reset password
+  @HttpCode(HttpStatus.OK)
+  @Post('reset-password')
+  @ApiOperation({ summary: 'User reset password' })
+  @ApiResponse({ status: 200, description: 'Password reset successfully.' })
+  @SkipAuth()
+  resetPassword(@Body() restData: ResetPasswordAuthDto) {
+    const { email, token, newPassword } = restData;
+    this.authService.resetPassword(email, token, newPassword);
+    return {
+      statusCode: HttpStatus.OK,
+      message: SYSTEM_MESSAGES.SUCCESS,
+    };
   }
 
   // DELETE /auths/:id
@@ -118,7 +147,11 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'User successfully deleted.' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @Roles(Role.Admin)
-  remove(@Param('id') id: string) {
-    return this.authService.remove(id);
+  async remove(@Param('id') id: string) {
+    await this.authService.remove(id);
+    return {
+      statusCode: HttpStatus.OK,
+      message: SYSTEM_MESSAGES.DELETE_SUCCESS,
+    };
   }
 }

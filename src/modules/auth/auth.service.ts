@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  Body,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -13,15 +12,18 @@ import { InjectModel } from '@nestjs/mongoose';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { SigninDto } from './dto/signin-auth.dto';
-import { Types } from 'mongoose';
 import _ from 'lodash';
 import { SYSTEM_MESSAGES } from 'src/common/constants/system-messages';
+import crypto from 'crypto';
+import { resetPasswordHtml } from 'src/emailTemplates/reset-password';
+import { ResendService } from 'src/common/resend/resend.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(Auth.name) private readonly authModel: Model<Auth>,
     private readonly jwtService: JwtService,
+    private readonly resendService: ResendService,
   ) {}
 
   // Hashing a password
@@ -30,6 +32,11 @@ export class AuthService {
     const salt = await bcrypt.genSalt(this.saltRounds);
     const hash = await bcrypt.hash(password, salt);
     return hash;
+  }
+  private generateResetToken() {
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
+    return { resetToken, expiresAt };
   }
 
   private readonly generateToken = async (user: User) => {
@@ -51,7 +58,8 @@ export class AuthService {
   }
 
   async signUp(createAuthDto: CreateAuthDto) {
-    let { username, email, password, role } = createAuthDto;
+    const { username, email, role } = createAuthDto;
+    let { password } = createAuthDto;
     const existingUser = await this.authModel.findOne({ email });
 
     if (existingUser) {
@@ -71,16 +79,13 @@ export class AuthService {
     // delete (user as { password?: string }).password;
     const token = await this.generateToken(unSaveUser);
     const user = _.omit(unSaveUser.toObject(), ['password']);
-
     return {
-      statusCode: 201,
-      message: SYSTEM_MESSAGES.AUTH_REGISTER_SUCCESS,
       data: user,
-      accessToken: token,
+      access_token: token,
     };
   }
 
-  async signIn(@Body() signInDto: SigninDto) {
+  async signIn(signInDto: SigninDto) {
     const { email, password } = signInDto;
     if (!email || !password) {
       throw new BadRequestException('enter username and email');
@@ -96,11 +101,49 @@ export class AuthService {
     const token = await this.generateToken(user);
     const UserPayload = _.omit(user.toObject(), ['password']);
     return {
-      statusCode: 200,
-      message: SYSTEM_MESSAGES.AUTH_LOGIN_SUCCESS,
       data: UserPayload,
       access_token: token,
     };
+  }
+
+  async forgotPassword(email: string, resetUrl: string) {
+    const user = await this.authModel.findOne({ email });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const { resetToken, expiresAt } = this.generateResetToken();
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordTokenExpiresAt = expiresAt;
+    await user.save();
+    // Construct the reset link using frontend's URL
+    const resetLink = `${resetUrl}?token=${resetToken}&email=${encodeURIComponent(
+      email,
+    )}`;
+
+    const html = resetPasswordHtml(resetLink);
+    const data = await this.resendService.sendEmail(
+      email,
+      'Password Reset Request',
+      html,
+    );
+    return data;
+  }
+
+  async resetPassword(email: string, token: string, newPassword: string) {
+    const user = await this.authModel.findOne({
+      email,
+      resetPasswordToken: token,
+      resetPasswordTokenExpiresAt: { $gt: new Date() },
+    });
+    if (!user) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    user.password = await this.hashPassword(newPassword);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordTokenExpiresAt = undefined;
+    await user.save();
   }
 
   async findAll(options: FindAllQuery) {
@@ -112,10 +155,7 @@ export class AuthService {
 
     const auths = await this.authModel.find({ ...query });
 
-    return {
-      message: SYSTEM_MESSAGES.AUTH_USER_RETRIEVE_SUCCESS,
-      data: auths,
-    };
+    return auths;
   }
 
   async update(id: number, updateAuthDto: UpdateAuthDto) {
@@ -134,24 +174,13 @@ export class AuthService {
     });
 
     if (!user) {
-      return {
-        message: 'User not found',
-        data: null,
-      };
+      throw new NotFoundException(SYSTEM_MESSAGES.NOT_FOUND);
     }
 
-    return {
-      message: SYSTEM_MESSAGES.UPDATE_SUCCESS,
-      data: {
-        user,
-      },
-    };
+    return user;
   }
 
   async remove(id: string) {
     await this.authModel.findByIdAndDelete(id);
-    return {
-      message: SYSTEM_MESSAGES.DELETE_SUCCESS,
-    };
   }
 }

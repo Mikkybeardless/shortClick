@@ -3,9 +3,13 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthSchema } from './entities/auth.entity';
+import { ResendModule } from 'src/common/resend/resend.module';
 
 @Module({
-  imports: [MongooseModule.forFeature([{ name: 'Auth', schema: AuthSchema }])],
+  imports: [
+    MongooseModule.forFeature([{ name: 'Auth', schema: AuthSchema }]),
+    ResendModule,
+  ],
   controllers: [AuthController],
   providers: [AuthService],
 })

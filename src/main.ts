@@ -5,6 +5,7 @@ import { AllExceptionsFilter } from './common/exception/globalException';
 import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 import { CombinedLogger } from './common/logger/combined.logger';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { RequestMethod } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -21,6 +22,13 @@ async function bootstrap() {
   app.enableCors(corsOptions);
   app.useLogger(app.get(CombinedLogger));
   app.useGlobalFilters(allExceptionsFilter);
+  app.setGlobalPrefix('api/v1', {
+    exclude: [
+      { path: '/', method: RequestMethod.GET },
+      { path: 'docs', method: RequestMethod.ALL },
+      { path: ':id', method: RequestMethod.GET },
+    ],
+  });
 
   // Swagger Configuration
   const config = new DocumentBuilder()

@@ -10,4 +10,6 @@ export default registerAs('app', () => ({
   weatherAPIKey: process.env.WEATHER_API_KEY,
   weatherAPIURI: process.env.WEATHER_API_URL,
   corsOrigins: process.env.CORS_ORIGINS,
+  resendApiKey: process.env.RESEND_API_KEY,
+  resendFromEmail: process.env.RESEND_FROM_EMAIL,
 }));

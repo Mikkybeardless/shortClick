@@ -6,13 +6,15 @@ services:
       - '8000:8000'
     env_file:
       - .env
+      # 2. Override the specific ones that change in Docker
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
     depends_on:
       - mongo
       - redis
     volumes:
       - ./logs:/app/logs
-    environment:
-      - NODE_ENV=production
     networks:
       - app-network
     restart: unless-stopped
