@@ -3,7 +3,7 @@ import { UrlController } from './url.controller';
 import { UrlService } from './url.service';
 import { Url } from './entities/url-entity.dto';
 import { getModelToken } from '@nestjs/mongoose';
-// import { RedisService } from '../redis/redis.service';
+//  import { RedisService } from '../redis/redis.service';
 import { JwtService } from '@nestjs/jwt'; // Import JwtService
 import { AuthGuard } from '../auth/guards/auth.guard';
 
@@ -18,11 +18,11 @@ const mockUrlModel = {
   findByIdAndDelete: jest.fn(),
 };
 
-const mockRedisService = {
-  getCache: jest.fn(),
-  setCache: jest.fn(),
-  clearCache: jest.fn(),
-};
+// const mockRedisService = {
+//   getCache: jest.fn(),
+//   setCache: jest.fn(),
+//   clearCache: jest.fn(),
+// };
 
 const mockJwtService = {
   sign: jest.fn(),

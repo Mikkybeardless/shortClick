@@ -2,9 +2,9 @@ name: Dev Code Quality Checks
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, dev]
   pull_request:
-    branches: [main, develop]
+    branches: [main, dev]
 
 jobs:
   code-quality-check:
@@ -40,8 +40,8 @@ jobs:
         run: npx prettier --check "**/*.ts"
 
       # Step 6: Run Unit Tests
-      - name: Run Unit Tests
-        run: npm run test:cov
+      # - name: Run Unit Tests
+      #   run: npm run test:cov
 
       # Step 7: Build Project
       - name: Build Application

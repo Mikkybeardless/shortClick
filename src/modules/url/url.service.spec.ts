@@ -7,11 +7,11 @@ import { Model } from 'mongoose';
 import { NotFoundException } from '@nestjs/common';
 
 // Mock implementations
-const mockRedisService = {
-  getCache: jest.fn(),
-  setCache: jest.fn(),
-  clearCache: jest.fn(),
-};
+// const mockRedisService = {
+//   getCache: jest.fn(),
+//   setCache: jest.fn(),
+//   clearCache: jest.fn(),
+// };
 
 const mockUrlModel = {
   // Mock Mongoose methods such as findOne, save, findById, etc.
